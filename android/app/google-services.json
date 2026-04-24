@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "374880543559",
+    "project_id": "damystrio",
+    "storage_bucket": "damystrio.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:374880543559:android:e7b866b277c7c7c9736262",
+        "android_client_info": {
+          "package_name": "com.daMystrio.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8IP0vsr_pjlJnAe7SOSyX8uKHm2OarLk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

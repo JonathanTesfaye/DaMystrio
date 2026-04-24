@@ -1,0 +1,71 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/features/home/ui/widgets/bottomPanel.dart';
+import 'package:flutter_application_1/features/home/ui/widgets/playButton.dart';
+import 'package:flutter_application_1/features/bankCo/ui/widgets/playerInfo.dart';
+import 'package:flutter_application_1/features/bankCo/ui/Poker.dart';
+
+import '../../../core/services/auth_service.dart';
+
+class HomePage extends StatelessWidget {
+  HomePage({super.key});
+
+  final AuthService authService = AuthService();
+  static const Color darkBlueBg = Color(0xFF0D1B2A);
+  static const Color accentGold = Color(0xFFD4AF37);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Scaffold(
+      body: Container(
+        color: darkBlueBg,
+        child: Stack(
+          children: [
+            //  BACKGROUND
+            Positioned.fill(
+              child: Image.asset(
+                'lib/assets/images/table2.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            //  PLAYER INFO
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+
+              child: PlayerInfo(
+                user: user,
+                onLogout: () async {
+                  await authService.signOut();
+                },
+              ),
+            ),
+
+            //  PLAY BUTTON
+            Positioned(
+              bottom: MediaQuery.of(context).size.height * 0.48,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: PlayButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => PokerPage()),
+                    );
+                  },
+                ),
+              ),
+            ),
+            //  BOTTOM PANEL
+            Positioned(bottom: 20, left: 0, right: 0, child: BottomPanel()),
+          ],
+        ),
+      ),
+    );
+  }
+}
