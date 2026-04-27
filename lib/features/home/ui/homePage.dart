@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/features/bankCo/backCo.dart';
 import 'package:flutter_application_1/features/bankCo/logic/gameController.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/bottomPanel.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/playButton.dart';
@@ -60,7 +61,7 @@ class HomePage extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => ChangeNotifierProvider(
                           create: (_) => GameController()..init([]),
-                          child: const PokerPage(),
+                          child: const PokerPage2(),
                         ),
                       ),
                     );

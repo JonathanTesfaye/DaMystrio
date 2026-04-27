@@ -17,4 +17,21 @@ class PlayerModel {
     this.cards = const [],
     this.status = PlayerStatus.idle,
   });
+  PlayerModel copyWith({
+    String? name,
+    String? avatar,
+    int? chips,
+    int? currentBet,
+    List<CardModel>? cards,
+    PlayerStatus? status,
+  }) {
+    return PlayerModel(
+      name: name ?? this.name,
+      avatar: avatar ?? this.avatar,
+      chips: chips ?? this.chips,
+      currentBet: currentBet ?? this.currentBet,
+      cards: cards ?? this.cards,
+      status: status ?? this.status,
+    );
+  }
 }

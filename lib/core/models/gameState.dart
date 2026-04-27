@@ -11,6 +11,7 @@ class GameState {
   final bool dealCards;
   final bool revealCards;
   final bool showThirdCard;
+  final bool showCardFaceUp;
 
   GameState({
     required this.players,
@@ -21,6 +22,7 @@ class GameState {
     this.dealCards = false,
     this.revealCards = false,
     this.showThirdCard = false,
+    this.showCardFaceUp = false,
   });
 
   GameState copyWith({
@@ -32,6 +34,7 @@ class GameState {
     bool? dealCards,
     bool? revealCards,
     bool? showThirdCard,
+    bool? showCardFaceUp,
   }) {
     return GameState(
       players: players ?? this.players,
@@ -42,6 +45,7 @@ class GameState {
       dealCards: dealCards ?? this.dealCards,
       revealCards: revealCards ?? this.revealCards,
       showThirdCard: showThirdCard ?? this.showThirdCard,
+      showCardFaceUp: showCardFaceUp ?? this.showCardFaceUp,
     );
   }
 }
