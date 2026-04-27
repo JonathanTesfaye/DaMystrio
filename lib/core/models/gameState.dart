@@ -1,37 +1,35 @@
-import 'package:flutter_application_1/core/models/cardModel.dart';
+import 'package:flutter_application_1/features/bankCo/logic/models/playerModel.dart';
 
-enum GamePhase { dealing, decision, reveal, result }
+enum GamePhase { betting, dealing, result }
 
 class GameState {
-  final List<CardModel> playerCards;
-  final CardModel? thirdCard;
+  final List<PlayerModel> players;
+  final int currentPlayerIndex;
+  final int pot;
   final GamePhase phase;
-  final String result;
-  final int playerChips;
-  final int currentBet;
+  final String message;
+
   GameState({
-    required this.playerCards,
-    this.thirdCard,
-    required this.phase,
-    this.result = "",
-    this.currentBet = 100,
-    this.playerChips = 1000,
+    required this.players,
+    this.currentPlayerIndex = 0,
+    this.pot = 0,
+    this.phase = GamePhase.betting,
+    this.message = "",
   });
+
   GameState copyWith({
-    List<CardModel>? playerCards,
-    CardModel? thirdCard,
+    List<PlayerModel>? players,
+    int? currentPlayerIndex,
+    int? pot,
     GamePhase? phase,
-    String? result,
-    int? playerChips,
-    int? currentBet,
+    String? message,
   }) {
     return GameState(
-      playerCards: playerCards ?? this.playerCards,
-      thirdCard: thirdCard ?? this.thirdCard,
+      players: players ?? this.players,
+      currentPlayerIndex: currentPlayerIndex ?? this.currentPlayerIndex,
+      pot: pot ?? this.pot,
       phase: phase ?? this.phase,
-      result: result ?? this.result,
-      playerChips: playerChips ?? this.playerChips,
-      currentBet: currentBet ?? this.currentBet,
+      message: message ?? this.message,
     );
   }
 }
