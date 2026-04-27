@@ -16,7 +16,7 @@ class GameRules {
     return isWin(c1, c2, c3);
   }
 
-  static boolresolveBankCo({
+  static bool resolveBankCo({
     required CardModel c1,
     required CardModel c2,
     required CardModel c3,

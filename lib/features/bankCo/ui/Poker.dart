@@ -1,197 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/models/gameState.dart';
+import 'package:flutter_application_1/features/bankCo/logic/models/playerModel.dart';
+import 'package:provider/provider.dart';
+
+import 'package:flutter_application_1/features/bankCo/logic/gameController.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/gameBackground.dart';
 import 'package:flutter_application_1/core/models/cardModel.dart';
-import 'package:flutter_application_1/core/models/gameState.dart';
-import 'package:flutter_application_1/core/services/gameServices.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/cardWidget.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/playerSeats.dart';
 
 class PokerPage extends StatefulWidget {
-  PokerPage({super.key});
+  const PokerPage({super.key});
 
   @override
   State<PokerPage> createState() => _PokerPageState();
 }
 
 class _PokerPageState extends State<PokerPage> {
-  final GameService gameService = GameService();
   final List<int?> betOptions = [50, 100, 200, 500, null];
-
-  late GameState gameState;
-
-  bool dealFirst = false;
-  bool dealSecond = false;
-  bool dropThirdCard = false;
-  bool revealSecond = false;
-  bool revealFirst = false;
-  bool canBet(int bet) {
-    return bet <= gameState.playerChips;
-  }
 
   int? selectedBet;
 
-  Offset dealerStart = Offset(0, -2);
+  Offset dealerStart = const Offset(0, -2);
 
   @override
   void initState() {
     super.initState();
-    gameService.initializeDeck();
-    gameState = GameState(
-      playerCards: gameService.dealTwoCards(),
-      phase: GamePhase.dealing,
-    );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(Duration(milliseconds: 1800), () {
-        setState(() {
-          gameState = gameState.copyWith(phase: GamePhase.decision);
-        });
-      });
-      Future.delayed(Duration(milliseconds: 300), () {
-        setState(() {
-          dealFirst = true;
-        });
-      });
-      Future.delayed(Duration(milliseconds: 800), () {
-        setState(() {
-          revealFirst = true;
-        });
-      });
+    Future.microtask(() {
+      final controller = context.read<GameController>();
 
-      Future.delayed(Duration(milliseconds: 900), () {
-        setState(() {
-          dealSecond = true;
-        });
-      });
+      controller.init([
+        PlayerModel(name: "You", avatar: "avatar", chips: 1000, currentBet: 50),
+      ]);
 
-      Future.delayed(Duration(milliseconds: 1800), () {
-        setState(() {
-          revealSecond = true;
-        });
-      });
+      controller.startRound(); // 🔥 THIS is what starts everything
     });
   }
 
-  // Third Card Animation logic
-  void takeThirdCard() {
-    final third = gameService.drawThirdCard();
-
-    setState(() {
-      gameState = gameState.copyWith(thirdCard: third, phase: GamePhase.reveal);
-      dropThirdCard = false;
-    });
-    Future.delayed(Duration(milliseconds: 100), () {
-      setState(() {
-        dropThirdCard = true;
-      });
-    });
-    Future.delayed(Duration(milliseconds: 600), () {
-      bool win = gameService.isWin(
-        gameState.playerCards[0],
-        gameState.playerCards[1],
-        third,
-      );
-      int newChips = gameState.playerChips;
-
-      if (win) {
-        newChips += gameState.currentBet;
-      } else {
-        newChips -= gameState.currentBet;
-      }
-
-      setState(() {
-        gameState = gameState.copyWith(
-          phase: GamePhase.result,
-          result: newChips <= 0
-              ? "Game Over"
-              : (win ? "You Win!" : "You Lose!"),
-          playerChips: newChips < 0 ? 0 : newChips,
-        );
-      });
-    });
-  }
-
-  // Pass Turn
-  void passRound() {
-    setState(() {
-      gameState = gameState.copyWith(
-        phase: GamePhase.result,
-        result: "You Passed",
-        thirdCard: null,
-      );
-      dropThirdCard = false;
-    });
-  }
-
-  // Half your Bet
-  void playForLess() {
-    setState(() {
-      gameState = gameState.copyWith(
-        currentBet: (gameState.currentBet / 2).toInt(),
-      );
-    });
-    takeThirdCard();
-  }
-
-  // Logic to allow to play again
-  void resetRound() {
-    gameService.initializeDeck();
-    setState(() {
-      gameState = gameState.copyWith(
-        playerCards: gameService.dealTwoCards(),
-        thirdCard: null,
-        phase: GamePhase.dealing,
-        result: "",
-        currentBet: gameState.playerChips >= 100 ? 100 : gameState.playerChips,
-      );
-      selectedBet = null;
-      dealFirst = false;
-      dealSecond = false;
-      revealFirst = false;
-      revealSecond = false;
-      dropThirdCard = false;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        setState(() {
-          dealFirst = true;
-        });
-      });
-      Future.delayed(const Duration(milliseconds: 800), () {
-        setState(() {
-          revealFirst = true;
-        });
-      });
-      Future.delayed(const Duration(milliseconds: 900), () {
-        setState(() {
-          dealSecond = true;
-        });
-      });
-      Future.delayed(const Duration(milliseconds: 1400), () {
-        setState(() {
-          revealSecond = true;
-        });
-      });
-      Future.delayed(const Duration(milliseconds: 1800), () {
-        setState(() {
-          gameState = gameState.copyWith(phase: GamePhase.decision);
-        });
-      });
-    });
-  }
-
+  // ================= SIZE HELPERS =================
   double get height => MediaQuery.of(context).size.height;
   double get width => MediaQuery.of(context).size.width;
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<GameController>();
+
+    final player = controller.state.players.isNotEmpty
+        ? controller.state.players[controller.state.currentPlayerIndex]
+        : null;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 10,
         automaticallyImplyLeading: false,
-
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -199,13 +63,11 @@ class _PokerPageState extends State<PokerPage> {
               mini: true,
               backgroundColor: Colors.blueGrey.withOpacity(0.7),
               child: const Icon(Icons.arrow_back, color: Colors.amber),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
             ),
             Text(
-              "Chips:${gameState.playerChips}",
-              style: TextStyle(
+              "Chips: ${player?.chips ?? 0}",
+              style: const TextStyle(
                 color: Colors.amber,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -214,22 +76,22 @@ class _PokerPageState extends State<PokerPage> {
           ],
         ),
       ),
+
       body: SizedBox.expand(
         child: GameBackground(
           child: Stack(
             children: [
-              // Table + Seats
+              // ================= TABLE =================
               Positioned(
                 top: height * 0.05,
                 left: -100,
                 right: -100,
                 child: Center(
-                  child: Container(
+                  child: SizedBox(
                     width: width * 2,
-                    height: height * 1,
+                    height: height,
                     child: Stack(
                       children: [
-                        // Playing table
                         Center(
                           child: Image.asset(
                             'lib/assets/images/Game Background 2.png',
@@ -237,19 +99,16 @@ class _PokerPageState extends State<PokerPage> {
                           ),
                         ),
 
-                        //Player seats around table
-                        // Left top player
-                        Align(
+                        // ===== PLAYERS =====
+                        const Align(
                           alignment: Alignment(-0.6, -0.47),
-                          child: const PlayerSeat(
+                          child: PlayerSeat(
                             playerName: "Liu Che",
                             balance: "1,250,000",
                             avatarPath: 'assets/images/avatar1.png',
                           ),
                         ),
-
-                        // Right top player
-                        Align(
+                        const Align(
                           alignment: Alignment(0.6, -0.47),
                           child: PlayerSeat(
                             playerName: "Scipio",
@@ -257,9 +116,7 @@ class _PokerPageState extends State<PokerPage> {
                             avatarPath: 'assets/images/avatar2.png',
                           ),
                         ),
-
-                        // Top player
-                        Align(
+                        const Align(
                           alignment: Alignment(0, -0.82),
                           child: PlayerSeat(
                             playerName: "Arthur",
@@ -267,9 +124,7 @@ class _PokerPageState extends State<PokerPage> {
                             avatarPath: 'assets/images/avatar3.png',
                           ),
                         ),
-
-                        // Left bottom Person
-                        Align(
+                        const Align(
                           alignment: Alignment(-0.58, 0.6),
                           child: PlayerSeat(
                             playerName: "QSH",
@@ -277,9 +132,7 @@ class _PokerPageState extends State<PokerPage> {
                             avatarPath: 'assets/images/avatar2.png',
                           ),
                         ),
-
-                        //Right Person 2
-                        Align(
+                        const Align(
                           alignment: Alignment(0.585, 0.6),
                           child: PlayerSeat(
                             playerName: "STP",
@@ -293,325 +146,140 @@ class _PokerPageState extends State<PokerPage> {
                 ),
               ),
 
-              // playing cards (2 cards)
+              // ================= PLAYER CARDS =================
               Positioned(
                 top: height * 0.2,
                 left: 0,
                 right: 0,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
                       width: width,
                       height: height * 0.4,
                       child: Stack(
-                        children: gameState.playerCards.asMap().entries.map((
-                          entry,
-                        ) {
-                          int index = entry.key;
-                          CardModel card = entry.value;
+                        children: player == null
+                            ? []
+                            : player.cards.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final card = entry.value;
 
-                          bool isDealt = index == 0 ? dealFirst : dealSecond;
-                          bool isReveal = index == 0
-                              ? revealFirst
-                              : revealSecond;
+                                final isDealt = controller.state.dealCards;
+                                final isReveal =
+                                    controller.state.phase ==
+                                        GamePhase.reveal ||
+                                    controller.state.phase == GamePhase.result;
 
-                          return AnimatedPositioned(
-                            top: isDealt ? height * 0.15 : height * 2,
-                            left: isDealt
-                                ? (width / 2 - 50) + (index * 50)
-                                : (width / -20),
-
-                            duration: Duration(milliseconds: 500),
-                            curve: Curves.easeOut,
-                            child: AnimatedOpacity(
-                              opacity: isDealt ? 1 : 0,
-                              duration: Duration(milliseconds: 300),
-                              child: isDealt
-                                  ? CardWidget(
+                                return AnimatedPositioned(
+                                  duration: const Duration(milliseconds: 500),
+                                  top: isDealt ? height * 0.15 : height * 2,
+                                  left: isDealt
+                                      ? (width / 2 - 50) + (index * 50)
+                                      : (width / -20),
+                                  curve: Curves.easeOut,
+                                  child: AnimatedOpacity(
+                                    opacity: isDealt ? 1 : 0,
+                                    duration: const Duration(milliseconds: 300),
+                                    child: CardWidget(
                                       key: ValueKey(
                                         '${card.value}-${card.suit}-$index',
                                       ),
                                       card: card,
                                       isFaceUp: isReveal,
-                                    )
-                                  : SizedBox(width: 40, height: 60),
-                            ),
-                          );
-                        }).toList(),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                       ),
                     ),
 
-                    // THIRD CARD
-                    if (gameState.thirdCard != null)
+                    // ================= THIRD CARD =================
+                    if (controller.thirdCard != null)
                       AnimatedSlide(
-                        offset: dropThirdCard ? Offset(0, -1) : Offset(0, 2),
-                        duration: Duration(milliseconds: 400),
+                        offset: controller.state.showThirdCard
+                            ? const Offset(0, -1)
+                            : const Offset(0, 2),
+                        duration: const Duration(milliseconds: 400),
                         curve: Curves.easeOut,
                         child: CardWidget(
                           key: ValueKey(
-                            '${gameState.thirdCard!.value}-${gameState.thirdCard!.suit}-third',
+                            '${controller.thirdCard!.value}-${controller.thirdCard!.suit}',
                           ),
-                          card: gameState.thirdCard!,
+                          card: controller.thirdCard!,
                           isFaceUp:
-                              gameState.phase == GamePhase.reveal ||
-                              gameState.phase == GamePhase.result,
+                              controller.state.phase == GamePhase.reveal ||
+                              controller.state.phase == GamePhase.result,
                         ),
                       ),
 
-                    // RESULT
-                    Container(
-                      padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        shape: BoxShape.rectangle,
-                      ),
-                      child: Text(
-                        gameState.result,
-                        style: const TextStyle(
-                          fontSize: 30,
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    // ================= RESULT =================
+                    Text(
+                      controller.state.message,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Game Action Buttons
-              if (gameState.phase == GamePhase.decision)
+              // ================= ACTION BUTTONS =================
+              if (controller.state.phase == GamePhase.decision)
                 Positioned(
                   bottom: 50,
                   left: 0,
                   right: 0,
                   child: Column(
                     children: [
-                      // bet options
                       Wrap(
                         spacing: 10,
                         children: betOptions.map((bet) {
-                          final isMax = bet == null;
-                          final betValue = isMax ? gameState.playerChips : bet;
-                          final isEnabled = betValue <= gameState.playerChips;
-                          final isSelected = selectedBet == betValue;
+                          final value =
+                              bet ??
+                              controller
+                                  .state
+                                  .players[controller.state.currentPlayerIndex]
+                                  .chips;
+
                           return ElevatedButton(
-                            onPressed: isEnabled
-                                ? () {
-                                    setState(() {
-                                      selectedBet = betValue;
-                                      gameState = gameState.copyWith(
-                                        currentBet: betValue,
-                                      );
-                                    });
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? Colors.green
-                                  : isEnabled
-                                  ? (isMax ? Colors.blue[900] : Colors.blue)
-                                  : Colors.grey,
-                              foregroundColor: isSelected
-                                  ? Colors.black
-                                  : Colors.amber,
-                              side: isSelected
-                                  ? BorderSide(color: Colors.yellow, width: 2)
-                                  : null,
-                            ),
-                            child: Text(
-                              isMax ? "Max" : "$betValue",
-                              style: TextStyle(
-                                color: Colors.amber,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
+                            onPressed: () {
+                              setState(() {
+                                selectedBet = value;
+                              });
+                            },
+                            child: Text(bet == null ? "Max" : "$bet"),
                           );
                         }).toList(),
                       ),
-                      SizedBox(height: 20),
-                      // Take third card
+
+                      const SizedBox(height: 20),
+
                       ElevatedButton(
-                        onPressed: takeThirdCard,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 15,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          "Take",
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        onPressed: controller.takeThirdCard,
+                        child: const Text("Take"),
                       ),
-                      SizedBox(height: 10),
-                      // Pass third card
                       ElevatedButton(
-                        onPressed: passRound,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[700],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 15,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          "Pass",
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        onPressed: controller.pass,
+                        child: const Text("Pass"),
                       ),
-                      SizedBox(height: 10),
-                      // Play for less
                       ElevatedButton(
-                        onPressed: playForLess,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[700],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 15,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          "Less",
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        onPressed: () => controller.forLess(selectedBet ?? 50),
+                        child: const Text("Less"),
                       ),
                     ],
                   ),
                 ),
-              // Reset Round
-              if (gameState.phase == GamePhase.result &&
-                  gameState.playerChips > 0)
+
+              // ================= NEXT ROUND =================
+              if (controller.state.phase == GamePhase.result)
                 Positioned(
                   bottom: 50,
                   left: 0,
                   right: 0,
-                  child: Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: resetRound,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[900],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 50,
-                            vertical: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          "Play again",
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              // Game Over - Reset Button
-              if (gameState.phase == GamePhase.result &&
-                  gameState.playerChips <= 0)
-                Positioned(
-                  bottom: 50,
-                  left: 0,
-                  right: 0,
-                  child: Column(
-                    children: [
-                      Text(
-                        "No Chips Left!",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            gameState = GameState(
-                              playerCards: gameService.dealTwoCards(),
-                              phase: GamePhase.dealing,
-                              playerChips: 1000,
-                            );
-                            selectedBet = null;
-
-                            // reset animations
-                            dealFirst = false;
-                            dealSecond = false;
-                            revealFirst = false;
-                            revealSecond = false;
-                            dropThirdCard = false;
-                          });
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            Future.delayed(
-                              const Duration(milliseconds: 300),
-                              () {
-                                setState(() => dealFirst = true);
-                              },
-                            );
-
-                            Future.delayed(
-                              const Duration(milliseconds: 800),
-                              () {
-                                setState(() => revealFirst = true);
-                              },
-                            );
-
-                            Future.delayed(
-                              const Duration(milliseconds: 900),
-                              () {
-                                setState(() => dealSecond = true);
-                              },
-                            );
-
-                            Future.delayed(
-                              const Duration(milliseconds: 1400),
-                              () {
-                                setState(() => revealSecond = true);
-                              },
-                            );
-
-                            Future.delayed(
-                              const Duration(milliseconds: 1800),
-                              () {
-                                setState(() {
-                                  gameState = gameState.copyWith(
-                                    phase: GamePhase.decision,
-                                  );
-                                });
-                              },
-                            );
-                          });
-                        },
-                        child: Text("Restart Game"),
-                      ),
-                    ],
+                  child: ElevatedButton(
+                    onPressed: controller.beginRound,
+                    child: const Text("Play Again"),
                   ),
                 ),
             ],

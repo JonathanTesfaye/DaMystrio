@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/features/bankCo/logic/gameController.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/bottomPanel.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/playButton.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/playerInfo.dart';
 import 'package:flutter_application_1/features/bankCo/ui/Poker.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
 
@@ -55,7 +57,12 @@ class HomePage extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => PokerPage()),
+                      MaterialPageRoute(
+                        builder: (_) => ChangeNotifierProvider(
+                          create: (_) => GameController()..init([]),
+                          child: const PokerPage(),
+                        ),
+                      ),
                     );
                   },
                 ),
