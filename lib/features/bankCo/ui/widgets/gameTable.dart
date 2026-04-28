@@ -72,7 +72,7 @@ class GameTable extends StatelessWidget {
                     // Table
                     Center(
                       child: Image.asset(
-                        'lib/assets/images/PlayerTable.png',
+                        'lib/assets/images/GameTable.png',
                         fit: BoxFit.contain,
                       ),
                     ),

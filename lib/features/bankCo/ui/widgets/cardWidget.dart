@@ -79,7 +79,7 @@ class _CardWidgetState extends State<CardWidget> {
       autoFlipDuration: Duration(milliseconds: 500),
       direction: FlipDirection.HORIZONTAL,
       front: buildCardContainer(
-        Image.asset('lib/assets/cards/card _back_blue.png', fit: BoxFit.cover),
+        Image.asset('lib/assets/cards/CardBack.png', fit: BoxFit.cover),
       ),
       back: buildCardContainer(Image.asset(getCardImage(), fit: BoxFit.cover)),
     );

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/models/cardModel.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/bankCo/da_bank_co_controller.dart';
 import 'package:flutter_application_1/features/bankCo/da_bank_co_state.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/cardWidget.dart';
@@ -14,21 +15,25 @@ class PokerPage2 extends StatefulWidget {
 }
 
 class _PokerPageState2 extends State<PokerPage2> {
+  double _getTableScale(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double originalTableWidth = screenWidth * 2;
+    double desiredTableWidth = 600.0; // adjust this to control table size
+    return desiredTableWidth / originalTableWidth;
+  }
+
   late DaBankCoController _controller;
 
-  // Messages for the central action bubble
   String? _bubbleMessage;
   Timer? _bubbleTimer;
   PointerDirection _bubbleArrowDirection = PointerDirection.up;
 
-  // Animation flags for human player's cards
   bool _dealFirst = false;
   bool _dealSecond = false;
   bool _dropThirdCard = false;
   bool _revealFirst = false;
   bool _revealSecond = false;
 
-  // Betting state
   int? _selectedBet;
   final List<int> _betValues = [50, 100, 200, 500];
 
@@ -37,7 +42,6 @@ class _PokerPageState2 extends State<PokerPage2> {
     super.initState();
     _controller = DaBankCoController(onStateChanged: _onGameStateChanged);
     _controller.startNewGame(startingPot: 0, customRoundContribution: 100);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _resetAndAnimateHumanCards();
     });
@@ -45,32 +49,23 @@ class _PokerPageState2 extends State<PokerPage2> {
 
   void _onGameStateChanged() {
     if (!mounted) return;
-
     final state = _controller.state;
     if (state.phase == DaBankCoPhase.round) {
       final currentPlayer = state.players[state.turnIndex];
       _bubbleArrowDirection = _seatIndexToDirection(currentPlayer.seatIndex);
     }
-
     final newMsg = state.lastMessage;
     if (newMsg.isNotEmpty && newMsg != "Start a new game.") {
       _showBubbleMessage(newMsg);
     }
-
     setState(() {});
   }
 
   void _showBubbleMessage(String msg) {
     _bubbleTimer?.cancel();
-    setState(() {
-      _bubbleMessage = msg;
-    });
+    setState(() => _bubbleMessage = msg);
     _bubbleTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _bubbleMessage = null;
-        });
-      }
+      if (mounted) setState(() => _bubbleMessage = null);
     });
   }
 
@@ -120,10 +115,7 @@ class _PokerPageState2 extends State<PokerPage2> {
     setState(() => _selectedBet = amount);
   }
 
-  void _beginRound() {
-    _controller.finishBettingAndBegin();
-  }
-
+  void _beginRound() => _controller.finishBettingAndBegin();
   void _bankCo() {
     _controller.bankCo();
     setState(() => _dropThirdCard = false);
@@ -151,9 +143,7 @@ class _PokerPageState2 extends State<PokerPage2> {
   void _resetRound() {
     _controller.startNewGame(startingPot: 0, customRoundContribution: 100);
     _resetAndAnimateHumanCards();
-    setState(() {
-      _selectedBet = null;
-    });
+    setState(() => _selectedBet = null);
   }
 
   bool get _isHumanTurn =>
@@ -171,11 +161,12 @@ class _PokerPageState2 extends State<PokerPage2> {
 
   @override
   Widget build(BuildContext context) {
+    double tableScale = _getTableScale(context);
     final state = _controller.state;
     final human = state.players[state.humanIndex];
     final currentPlayer =
-        state.phase == DaBankCoPhase.round &&
-            state.turnIndex < state.players.length
+        (state.phase == DaBankCoPhase.round &&
+            state.turnIndex < state.players.length)
         ? state.players[state.turnIndex]
         : null;
 
@@ -183,35 +174,34 @@ class _PokerPageState2 extends State<PokerPage2> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 10,
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        elevation: 0,
+        centerTitle: true,
+        leading: Container(
+          margin: const EdgeInsets.only(left: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withOpacity(0.7),
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            color: AppTheme.primaryGold,
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.blueGrey.withOpacity(0.7),
-              child: const Icon(Icons.arrow_back, color: Colors.amber),
-              onPressed: () => Navigator.pop(context),
+            Text(
+              "Pot: ${state.pot}",
+              style: AppTheme.captionGold.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Pot: ${state.pot}",
-                  style: const TextStyle(
-                    color: Colors.amber,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  "Contribution: ${state.roundContribution}",
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
+            Text(
+              "Contribution: ${state.roundContribution}",
+              style: AppTheme.bodyText.copyWith(fontSize: 12),
             ),
-            const SizedBox(width: 56),
           ],
         ),
       ),
@@ -219,77 +209,66 @@ class _PokerPageState2 extends State<PokerPage2> {
         child: GameBackground(
           child: Stack(
             children: [
-              // ---------- Player Seats (circular avatars, only chips & bait) ----------
+              // Player seats (circular avatars)
               Positioned(
-                top: height * 0.05,
                 left: -100,
                 right: -100,
                 child: Center(
-                  child: SizedBox(
-                    width: width * 2,
-                    height: height,
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Image.asset(
-                            'lib/assets/images/PlayerTable.png',
-                            fit: BoxFit.contain,
+                  child: Transform.scale(
+                    scale: tableScale,
+                    child: SizedBox(
+                      width: width * 2,
+                      height: height,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Image.asset(
+                              'lib/assets/images/GameTable.png',
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
-                        // AI 1 - Top seat (Arthur)
-                        Align(
-                          alignment: const Alignment(0, -0.82),
-                          child: CompactPlayerInfo(
-                            player: state.players[2],
-                            isCurrentTurn:
-                                state.phase == DaBankCoPhase.round &&
-                                state.turnIndex == 2,
+                          Align(
+                            alignment: const Alignment(0, -0.82),
+                            child: CompactPlayerInfo(
+                              player: state.players[2],
+                              isCurrentTurn:
+                                  state.phase == DaBankCoPhase.round &&
+                                  state.turnIndex == 2,
+                            ),
                           ),
-                        ),
-                        // AI 2 - Left-top (Liu Che)
-                        Align(
-                          alignment: const Alignment(-0.6, -0.47),
-                          child: CompactPlayerInfo(
-                            player: state.players[0],
-                            isCurrentTurn:
-                                state.phase == DaBankCoPhase.round &&
-                                state.turnIndex == 0,
+                          Align(
+                            alignment: const Alignment(-0.75, 0.15),
+                            child: CompactPlayerInfo(
+                              player: state.players[0],
+                              isCurrentTurn:
+                                  state.phase == DaBankCoPhase.round &&
+                                  state.turnIndex == 0,
+                            ),
                           ),
-                        ),
-                        // AI 3 - Right-top (Scipio)
-                        Align(
-                          alignment: const Alignment(0.6, -0.47),
-                          child: CompactPlayerInfo(
-                            player: state.players[1],
-                            isCurrentTurn:
-                                state.phase == DaBankCoPhase.round &&
-                                state.turnIndex == 1,
+                          Align(
+                            alignment: const Alignment(0.75, 0.15),
+                            child: CompactPlayerInfo(
+                              player: state.players[1],
+                              isCurrentTurn:
+                                  state.phase == DaBankCoPhase.round &&
+                                  state.turnIndex == 1,
+                            ),
                           ),
-                        ),
-                        // Human - Bottom center
-                        Align(
-                          alignment: const Alignment(0, 0.5),
-                          child: CompactPlayerInfo(
-                            player: human,
-                            isCurrentTurn: _isHumanTurn,
+                          Align(
+                            alignment: const Alignment(0, 0.8),
+                            child: CompactPlayerInfo(
+                              player: human,
+                              isCurrentTurn: _isHumanTurn,
+                            ),
                           ),
-                        ),
-                        // Decorative seats (hidden)
-                        const Align(
-                          alignment: Alignment(-0.58, 0.6),
-                          child: SizedBox.shrink(),
-                        ),
-                        const Align(
-                          alignment: Alignment(0.585, 0.6),
-                          child: SizedBox.shrink(),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
 
-              // ---------- Central Game Area (cards + action bubble) ----------
+              // Central cards + action bubble
               if (state.phase == DaBankCoPhase.round && currentPlayer != null)
                 Center(
                   child: Column(
@@ -310,7 +289,7 @@ class _PokerPageState2 extends State<PokerPage2> {
                   ),
                 ),
 
-              // ---------- Bottom Navigation Bar (dynamic) ----------
+              // Bottom navigation bar
               Positioned(
                 bottom: 20,
                 left: 16,
@@ -324,106 +303,114 @@ class _PokerPageState2 extends State<PokerPage2> {
     );
   }
 
+  // ---------- Bottom Navigation Bar (fully themed) ----------
   Widget _buildBottomNavBar(DaBankCoGameState state, DaBankCoPlayer human) {
-    // Betting phase
     if (state.phase == DaBankCoPhase.betting) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.amber.shade300),
+          color: AppTheme.pureBlack.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: AppTheme.primaryGold.withOpacity(0.5),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // Bet button with dropdown
             PopupMenuButton<int>(
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 12,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.blue[800],
-                  borderRadius: BorderRadius.circular(24),
+                  color: AppTheme.emeraldGreen,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
+                child: Text(
                   "Bet",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTheme.buttonText.copyWith(color: AppTheme.offWhite),
                 ),
               ),
-              onSelected: (value) => _placeBet(value),
+              onSelected: _placeBet,
               itemBuilder: (context) => [
                 ..._betValues.map(
-                  (v) => PopupMenuItem(value: v, child: Text("$v chips")),
+                  (v) => PopupMenuItem(
+                    value: v,
+                    child: Text("$v chips", style: AppTheme.bodyText),
+                  ),
                 ),
                 PopupMenuItem(
                   value: human.balance,
-                  child: Text("Max (${human.balance})"),
+                  child: Text(
+                    "Max (${human.balance})",
+                    style: AppTheme.bodyText,
+                  ),
                 ),
               ],
             ),
-            // Begin Round button
             ElevatedButton(
               onPressed: _beginRound,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
+                backgroundColor: AppTheme.primaryGold,
+                foregroundColor: AppTheme.pureBlack,
+                textStyle: AppTheme.buttonText,
               ),
-              child: const Text(
-                "Begin Round",
-                style: TextStyle(color: Colors.amber),
-              ),
+              child: const Text("Begin Round"),
             ),
           ],
         ),
       );
     }
 
-    // Round phase – human turn
     if (state.phase == DaBankCoPhase.round && _isHumanTurn) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.amber.shade300),
+          color: AppTheme.pureBlack.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: AppTheme.primaryGold.withOpacity(0.5),
+            width: 2,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _navButton("Bank Co", Colors.green[700]!, _bankCo),
-            _navButton("For Less", Colors.orange[700]!, _forLess),
-            _navButton("Pass", Colors.red[700]!, _pass),
+            _navButton("Bank Co", AppTheme.emeraldGreen, _bankCo),
+            _navButton("For Less", AppTheme.highlightGold, _forLess),
+            _navButton("Pass", AppTheme.lose, _pass),
           ],
         ),
       );
     }
 
-    // If round phase but not human turn, show a message or nothing
     if (state.phase == DaBankCoPhase.round && !_isHumanTurn) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(30),
+          color: AppTheme.surface.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3)),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             "AI thinking...",
-            style: TextStyle(color: Color.fromARGB(179, 246, 228, 39)),
+            style: AppTheme.captionGold.copyWith(fontWeight: FontWeight.normal),
           ),
         ),
       );
     }
 
-    // Fallback (result phase or idle) – show restart button
     return ElevatedButton(
       onPressed: _resetRound,
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[900]),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.darkEmerald,
+        foregroundColor: AppTheme.primaryGold,
+        textStyle: AppTheme.buttonText,
+      ),
       child: const Text("New Game"),
     );
   }
@@ -431,8 +418,13 @@ class _PokerPageState2 extends State<PokerPage2> {
   Widget _navButton(String label, Color bgColor, VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(backgroundColor: bgColor),
-      child: Text(label, style: const TextStyle(color: Colors.white)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: bgColor,
+        foregroundColor: AppTheme.pureBlack,
+        textStyle: AppTheme.buttonText.copyWith(fontSize: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      ),
+      child: Text(label),
     );
   }
 
@@ -440,18 +432,19 @@ class _PokerPageState2 extends State<PokerPage2> {
     final cards = player.cards;
     if (cards.isEmpty) return const SizedBox.shrink();
 
-    final bool isHuman = !player.isAI;
-    final bool hasThird = cards.length == 3;
+    final isHuman = !player.isAI;
+    final hasThird = cards.length == 3;
     final firstCard = cards[0];
     final secondCard = cards[1];
     final thirdCard = hasThird ? cards[2] : null;
 
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 100),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.amber.shade300, width: 2),
+        color: AppTheme.pureBlack.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppTheme.primaryGold, width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -495,7 +488,7 @@ class _PokerPageState2 extends State<PokerPage2> {
   }
 }
 
-// ---------- Player Info with Circular Avatar (no container border) ----------
+// ---------- Player Info with transparent background box ----------
 class CompactPlayerInfo extends StatelessWidget {
   final DaBankCoPlayer player;
   final bool isCurrentTurn;
@@ -506,7 +499,6 @@ class CompactPlayerInfo extends StatelessWidget {
     required this.isCurrentTurn,
   });
 
-  // Map seat index to avatar asset (you can replace with your actual image paths)
   String _getAvatarPath() {
     switch (player.seatIndex) {
       case 0:
@@ -524,51 +516,72 @@ class CompactPlayerInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isHuman = !player.isAI;
+
+    final avatar = Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: isCurrentTurn
+            ? [
+                BoxShadow(
+                  color: AppTheme.primaryGold.withOpacity(0.8),
+                  blurRadius: 12,
+                  spreadRadius: 4,
+                ),
+              ]
+            : [],
+      ),
+      child: ClipOval(
+        child: Container(
+          width: 70,
+          height: 70,
+          color: AppTheme.surface,
+          child: Image.asset(
+            _getAvatarPath(),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(Icons.person, color: AppTheme.primaryGold, size: 35);
+            },
+          ),
+        ),
+      ),
+    );
+
+    final info = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.pureBlack.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            player.name,
+            style: AppTheme.bodyText.copyWith(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            "Chips: ${player.balance}",
+            style: AppTheme.captionGold.copyWith(fontSize: 12),
+          ),
+          Text(
+            "Bait: ${player.bet}",
+            style: AppTheme.bodyText.copyWith(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        // Circular avatar with glowing border when active
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: isCurrentTurn
-                ? [
-                    BoxShadow(
-                      color: Colors.amber.withOpacity(0.8),
-                      blurRadius: 12,
-                      spreadRadius: 4,
-                    ),
-                  ]
-                : [],
-          ),
-          child: CircleAvatar(
-            radius: 35,
-            backgroundImage: AssetImage(_getAvatarPath()),
-            backgroundColor: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          player.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          "Chips: ${player.balance}",
-          style: const TextStyle(color: Colors.amber, fontSize: 12),
-        ),
-        Text(
-          "Bait: ${player.bet}",
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-      ],
+      children: isHuman
+          ? [info, const SizedBox(height: 6), avatar]
+          : [avatar, const SizedBox(height: 6), info],
     );
   }
 }
 
-// ---------- Action Bubble with Arrow (unchanged) ----------
+// ---------- Action Bubble (themed, with wrap support) ----------
 class ActionBubble extends StatelessWidget {
   final String message;
   final PointerDirection pointerDirection;
@@ -582,11 +595,12 @@ class ActionBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 280), // prevents overflow
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.85),
+        color: AppTheme.pureBlack.withOpacity(0.85),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.amber, width: 1.5),
+        border: Border.all(color: AppTheme.primaryGold, width: 1.5),
         boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8)],
       ),
       child: Row(
@@ -594,12 +608,11 @@ class ActionBubble extends StatelessWidget {
         children: [
           _buildArrow(),
           const SizedBox(width: 12),
-          Text(
-            message,
-            style: const TextStyle(
-              color: Colors.amber,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              message,
+              style: AppTheme.captionGold.copyWith(fontSize: 12),
+              softWrap: true,
             ),
           ),
         ],
@@ -623,7 +636,7 @@ class ActionBubble extends StatelessWidget {
         arrow = Icons.arrow_forward;
         break;
     }
-    return Icon(arrow, color: Colors.amber, size: 20);
+    return Icon(arrow, color: AppTheme.primaryGold, size: 20);
   }
 }
 

@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/features/leaderboard/ui/Leaderboard.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/gameModeButton.dart';
-import 'package:flutter_application_1/features/mission/ui/mission.dart';
 import 'package:flutter_application_1/features/mission/ui/dailyMission.dart';
 import 'package:flutter_application_1/features/leaderboard/ui/leaderboardPage.dart';
+import 'package:flutter_application_1/features/mission/ui/mission.dart';
+import 'package:flutter_application_1/features/leaderboard/ui/Leaderboard.dart';
 
-class BottomPanel extends StatelessWidget {
-  static const Color darkBlueBg = Color(0xFF0D1B2A);
-  static const Color accentGold = Color(0xFFD4AF37);
-
+class BottomPanel extends StatefulWidget {
   const BottomPanel({super.key});
+
+  @override
+  State<BottomPanel> createState() => _BottomPanelState();
+}
+
+class _BottomPanelState extends State<BottomPanel> {
+  int _selectedModeIndex = 0; // 0 = BankCo, 1 = Injera be Wot (coming soon)
+
+  void _onModeTap(int index) {
+    if (index == 1) return; // coming soon – no action
+    setState(() {
+      _selectedModeIndex = index;
+    });
+    // Optional: navigate or trigger game start for BankCo
+    if (index == 0) {
+      // Example: Navigator.push(context, MaterialPageRoute(builder: (_) => PokerPage2()));
+      print("BankCo selected");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,63 +34,64 @@ class BottomPanel extends StatelessWidget {
       height: 260,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: darkBlueBg.withOpacity(0.5),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        color: AppTheme.surface.withOpacity(0.6),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.primaryGold.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
           children: [
             Text(
               'Game Mode',
-              style: TextStyle(
-                color: accentGold,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTheme.headingMedium.copyWith(fontSize: 20),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             GameModeButton(
-              title: "Unranked",
-              subtitle: "no bets",
+              title: "BankCo",
+              subtitle: "100 chip entry",
               icon: Icons.emoji_events,
+              isSelected: _selectedModeIndex == 0,
+              onTap: () => _onModeTap(0),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             GameModeButton(
-              title: "Tournaments",
-              subtitle: "2 Active",
+              title: "Injera be Wot",
+              subtitle: "Coming Soon",
               icon: Icons.emoji_events,
+              isComingSoon: true,
+              isSelected: false,
+              onTap: null,
             ),
-            SizedBox(height: 10),
-            GameModeButton(
-              title: "Special Events",
-              subtitle: "Club Heritage",
-              icon: Icons.event,
+            const SizedBox(height: 10),
+            Divider(
+              color: AppTheme.primaryGold.withOpacity(0.5),
+              thickness: 1.5,
+              height: 0,
             ),
-            SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                border: BoxBorder.all(color: accentGold, width: 2),
-              ),
-            ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => DailyMissionPage()),
+                  MaterialPageRoute(builder: (_) => const DailyMissionPage()),
                 );
               },
-              child: MissionCard(),
+              child: const MissionCard(),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => LeaderboardPage()),
+                  MaterialPageRoute(builder: (_) => const LeaderboardPage()),
                 );
               },
-              child: LeaderboardCard(),
+              child: const LeaderboardCard(),
             ),
           ],
         ),

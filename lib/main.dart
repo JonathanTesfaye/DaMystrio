@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
+import 'package:flutter_application_1/features/auth/ui/loginPage.dart';
 import 'package:flutter_application_1/firebase_options.dart';
 import 'package:flutter_application_1/features/bankCo/ui/Poker.dart';
 import 'package:flutter_application_1/features/auth/authWrapper.dart';
@@ -17,6 +19,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: HomePage());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: HomePage(),
+    );
   }
 }

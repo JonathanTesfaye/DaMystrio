@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/appTheme.dart';
 
 class CustomTextfeild extends StatelessWidget {
   final String hintText;
@@ -21,14 +22,31 @@ class CustomTextfeild extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: TextFormField(
-        style: TextStyle(color: Colors.white),
+        style: AppTheme.bodyText, // ✅ use themed text color
         controller: controller,
         obscureText: obscureText,
         validator: validator,
         decoration: InputDecoration(
-          prefixIcon: Icon(icon),
+          prefixIcon: Icon(icon, color: AppTheme.primaryGold), // ✅ gold icon
           hintText: hintText,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          hintStyle: AppTheme.bodyText.copyWith(
+            color: AppTheme.offWhite.withOpacity(0.5),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12), // ✅ consistent radius
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: AppTheme.primaryGold.withOpacity(0.5),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.primaryGold, width: 2),
+          ),
+          filled: true,
+          fillColor: AppTheme.surface,
         ),
       ),
     );

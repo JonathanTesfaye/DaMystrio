@@ -10,7 +10,7 @@ class GameBackground extends StatelessWidget {
       children: [
         Positioned.fill(
           child: Image.asset(
-            'lib/assets/images/Background.png',
+            'lib/assets/images/Background1.png',
             fit: BoxFit.fitWidth,
 
             repeat: ImageRepeat.repeat,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 
 class AuthCard extends StatelessWidget {
   final String title;
@@ -6,8 +7,6 @@ class AuthCard extends StatelessWidget {
   final String buttonText;
   final VoidCallback onPressed;
   final Widget switchButton;
-  static const Color darkBlueBg = Color(0xFF0D1B2A);
-  static const Color accentGold = Color(0xFFD4AF37);
 
   const AuthCard({
     super.key,
@@ -21,37 +20,29 @@ class AuthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: darkBlueBg.withOpacity(0.9),
+      color: AppTheme.surface.withOpacity(
+        0.7,
+      ), // ✅ semi‑transparent dark surface
       elevation: 6,
-      margin: EdgeInsets.all(20),
+      margin: const EdgeInsets.all(20),
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                wordSpacing: 0,
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            // Form
+            Text(title, style: AppTheme.headingLarge.copyWith(fontSize: 30)),
             form,
-            SizedBox(height: 20),
-            // Button
+            const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentGold,
-                textStyle: TextStyle(color: Colors.white),
+                backgroundColor: AppTheme.primaryGold,
+                foregroundColor: AppTheme.pureBlack,
+                textStyle: AppTheme.buttonText,
               ),
               onPressed: onPressed,
               child: Text(buttonText),
             ),
-            SizedBox(height: 20),
-            // Switch Button
+            const SizedBox(height: 20),
             switchButton,
           ],
         ),

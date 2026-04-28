@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/bankCo/backCo.dart';
 import 'package:flutter_application_1/features/bankCo/logic/gameController.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/bottomPanel.dart';
@@ -7,15 +8,12 @@ import 'package:flutter_application_1/features/home/ui/widgets/playButton.dart';
 import 'package:flutter_application_1/features/bankCo/ui/widgets/playerInfo.dart';
 import 'package:flutter_application_1/features/bankCo/ui/Poker.dart';
 import 'package:provider/provider.dart';
-
 import '../../../core/services/auth_service.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
 
   final AuthService authService = AuthService();
-  static const Color darkBlueBg = Color(0xFF0D1B2A);
-  static const Color accentGold = Color(0xFFD4AF37);
 
   @override
   Widget build(BuildContext context) {
@@ -23,23 +21,22 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        color: darkBlueBg,
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: Stack(
           children: [
-            //  BACKGROUND
             Positioned.fill(
               child: Image.asset(
-                'lib/assets/images/table2.png',
-                fit: BoxFit.cover,
+                'lib/assets/images/HomeHero.png',
+                fit: BoxFit.fitHeight,
+                color: AppTheme.primaryGold.withOpacity(0.05),
+                colorBlendMode: BlendMode.darken,
               ),
             ),
 
-            //  PLAYER INFO
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-
               child: PlayerInfo(
                 user: user,
                 onLogout: () async {
@@ -69,6 +66,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
+
             //  BOTTOM PANEL
             Positioned(bottom: 20, left: 0, right: 0, child: BottomPanel()),
           ],

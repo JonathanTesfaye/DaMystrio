@@ -4,6 +4,7 @@ import 'package:flutter_application_1/features/auth/register_form.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_application_1/features/home/ui/homePage.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'loginPage.dart';
 
 class RegisterPage extends StatelessWidget {
@@ -28,16 +29,22 @@ class RegisterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: AuthCard.darkBlueBg,
+        decoration: BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ), // ✅ themed gradient
         child: Stack(
           children: [
-            //Background
+            // Background image with gradient mask
             Animate(
               child: Image.asset(
-                'lib/assets/images/Cards.png',
+                'lib/assets/images/RegisterImage.png',
                 width: double.infinity,
                 height: MediaQuery.of(context).size.height * 1,
                 fit: BoxFit.cover,
+                color: AppTheme.primaryGold.withOpacity(
+                  0.1,
+                ), // subtle gold tint
+                colorBlendMode: BlendMode.lighten,
               ),
             ).custom(
               builder: (context, value, child) {
@@ -46,8 +53,11 @@ class RegisterPage extends StatelessWidget {
                     return LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.black, Colors.transparent],
-                      stops: [0.1, 0.8],
+                      colors: [
+                        AppTheme.pureBlack,
+                        Colors.transparent,
+                      ], // ✅ use theme black
+                      stops: const [0.1, 0.8],
                     ).createShader(rect);
                   },
                   blendMode: BlendMode.dstIn,
@@ -56,7 +66,7 @@ class RegisterPage extends StatelessWidget {
               },
             ),
 
-            // UI
+            // Auth Card Container
             Container(
               margin: const EdgeInsets.fromLTRB(0, 100, 0, 0),
               color: Colors.transparent,
@@ -81,7 +91,7 @@ class RegisterPage extends StatelessWidget {
                         );
 
                         if (error != null) {
-                          print("Firebase Error: $error"); // <-- Add this line
+                          print("Firebase Error: $error");
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text("Registration failed: $error"),
@@ -103,7 +113,10 @@ class RegisterPage extends StatelessWidget {
                           MaterialPageRoute(builder: (context) => LoginPage()),
                         );
                       },
-                      child: const Text("Already have an account? Login"),
+                      child: Text(
+                        "Already have an account? Login",
+                        style: AppTheme.bodyText, // ✅ themed
+                      ),
                     ),
                   ),
                 ),
