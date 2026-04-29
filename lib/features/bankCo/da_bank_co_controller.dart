@@ -91,7 +91,14 @@ class DaBankCoController {
   void bankCo() {
     final player = _state.players[_state.turnIndex];
     if (_state.phase != DaBankCoPhase.round || player.isAI) return;
-    // BankCo: risk the entire pot (matching HTML)
+    // Must have enough chips to risk the entire pot
+    if (player.balance < _state.pot) {
+      _setMessage(
+        "Insufficient chips to call Bank Co (need ${_state.pot} chips).",
+      );
+      onStateChanged();
+      return;
+    }
     _resolvePlay(_state.pot, "bankco");
   }
 
@@ -102,7 +109,15 @@ class DaBankCoController {
       _setMessage("Enter a valid For Less amount.");
       return;
     }
-    _resolvePlay(amount, "less");
+    // Can't risk more than pot or more than player's balance
+    int actualRisk = amount;
+    if (actualRisk > player.balance) actualRisk = player.balance;
+    if (actualRisk > _state.pot) actualRisk = _state.pot;
+    if (actualRisk <= 0) {
+      _setMessage("Cannot risk that amount.");
+      return;
+    }
+    _resolvePlay(actualRisk, "less");
   }
 
   void passTurn() {
@@ -196,7 +211,6 @@ class DaBankCoController {
     var player = _state.players[_state.turnIndex];
     if (_state.phase != DaBankCoPhase.round || player.cards.length != 2) return;
 
-    int actualRisk = min(riskAmount, player.balance);
     CardModel third = _drawCard();
     player.cards.add(third);
 
@@ -211,7 +225,6 @@ class DaBankCoController {
     if (between) {
       // WIN
       if (isBankCo) {
-        // BankCo win: player takes whole pot, pot becomes 0, new round starts
         int wonPot = _state.pot;
         player.balance += wonPot;
         _state = _state.copyWith(pot: 0);
@@ -220,30 +233,29 @@ class DaBankCoController {
           "${player.name} called Bank Co and won the entire pot ($wonPot chips)!",
         );
         onStateChanged();
-        // Immediately start a new round after BankCo win (like HTML)
         Future.delayed(
           const Duration(milliseconds: 1800),
           () => _startNextBettingRound(),
         );
         return;
       } else {
-        // For Less win: player wins the chosen amount from pot
-        player.balance += actualRisk;
-        _state = _state.copyWith(pot: max(0, _state.pot - actualRisk));
+        // For Less win: player wins the riskAmount from pot
+        player.balance += riskAmount;
+        _state = _state.copyWith(pot: _state.pot - riskAmount);
         player.state = "won";
-        _setMessage("${player.name} wins $actualRisk chips!");
+        _setMessage("${player.name} wins $riskAmount chips!");
       }
     } else {
       // LOSE
-      player.balance -= actualRisk;
-      _state = _state.copyWith(pot: _state.pot + actualRisk);
+      player.balance -= riskAmount;
+      _state = _state.copyWith(pot: _state.pot + riskAmount);
       player.state = "lost";
       if (isBankCo) {
         _setMessage(
-          "${player.name} called Bank Co and lost $actualRisk chips.",
+          "${player.name} called Bank Co and lost $riskAmount chips.",
         );
       } else {
-        _setMessage("${player.name} loses $actualRisk chips.");
+        _setMessage("${player.name} loses $riskAmount chips.");
       }
     }
     onStateChanged();
@@ -283,12 +295,24 @@ class DaBankCoController {
       return;
     }
     double roll = _random.nextDouble();
-    if (gap >= 6 && roll < 0.35) {
-      // AI BankCo: risk the whole pot (same as HTML)
+    // AI BankCo only if can afford whole pot
+    if (gap >= 6 && roll < 0.35 && player.balance >= _state.pot) {
       _resolvePlay(_state.pot, "bankco");
     } else if (gap >= 3 && roll < 0.75) {
       int lessAmount = (_state.pot * 0.25).floor().clamp(25, player.balance);
-      _resolvePlay(lessAmount, "less");
+      if (lessAmount > _state.pot) lessAmount = _state.pot;
+      if (lessAmount > 0) {
+        _resolvePlay(lessAmount, "less");
+      } else {
+        player.state = "passed";
+        _setMessage("${player.name} passed.");
+        onStateChanged();
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          player.cards = [];
+          _state = _state.copyWith(turnIndex: _state.turnIndex + 1);
+          _startTurn();
+        });
+      }
     } else {
       player.state = "passed";
       _setMessage("${player.name} passed.");

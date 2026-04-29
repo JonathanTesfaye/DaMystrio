@@ -26,8 +26,8 @@ class HomePage extends StatelessWidget {
           children: [
             Positioned.fill(
               child: Image.asset(
-                'lib/assets/images/HomeHero.png',
-                fit: BoxFit.fitHeight,
+                'lib/assets/images/HomeHero2.png',
+                fit: BoxFit.fill,
                 color: AppTheme.primaryGold.withOpacity(0.05),
                 colorBlendMode: BlendMode.darken,
               ),

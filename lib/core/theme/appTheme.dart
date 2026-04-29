@@ -49,6 +49,15 @@ class AppTheme {
     letterSpacing: 0.8,
   );
 
+  // Added headingSmall for game over and similar UI
+  static const TextStyle headingSmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: offWhite,
+    letterSpacing: 0.6,
+  );
+
   static const TextStyle bodyText = TextStyle(
     fontFamily: fontFamily,
     fontSize: 16,
@@ -95,7 +104,6 @@ class AppTheme {
       cardColor: surface,
       dividerColor: primaryGold.withOpacity(0.3),
 
-      // -------------------- AppBar --------------------
       appBarTheme: const AppBarTheme(
         backgroundColor: pureBlack,
         elevation: 0,
@@ -104,17 +112,16 @@ class AppTheme {
         iconTheme: IconThemeData(color: primaryGold),
       ),
 
-      // -------------------- Text --------------------
       textTheme: const TextTheme(
         displayLarge: headingLarge,
         headlineMedium: headingMedium,
+        titleMedium: headingSmall, // maps to titleMedium
         bodyLarge: bodyText,
         bodyMedium: bodyText,
         labelLarge: buttonText,
         titleSmall: captionGold,
       ),
 
-      // -------------------- Elevated Button (no hoverColor in styleFrom) --------------------
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           foregroundColor: pureBlack,
@@ -129,7 +136,6 @@ class AppTheme {
         ),
       ),
 
-      // -------------------- Outlined Button --------------------
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryGold,
@@ -142,7 +148,6 @@ class AppTheme {
         ),
       ),
 
-      // -------------------- Input Fields --------------------
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
@@ -162,7 +167,6 @@ class AppTheme {
         hintStyle: const TextStyle(color: offWhite, fontSize: 14),
       ),
 
-      // -------------------- Cards & Dialogs --------------------
       cardTheme: CardThemeData(
         color: surface,
         elevation: 4,

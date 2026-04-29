@@ -15,41 +15,40 @@ class PokerPage2 extends StatefulWidget {
 }
 
 class _PokerPageState2 extends State<PokerPage2> {
-  double _getTableScale(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double originalTableWidth = screenWidth * 2;
-    double desiredTableWidth = 600.0; // adjust this to control table size
-    return desiredTableWidth / originalTableWidth;
-  }
-
   late DaBankCoController _controller;
 
+  // Bubble message
   String? _bubbleMessage;
   Timer? _bubbleTimer;
   PointerDirection _bubbleArrowDirection = PointerDirection.up;
 
-  bool _dealFirst = false;
-  bool _dealSecond = false;
-  bool _dropThirdCard = false;
-  bool _revealFirst = false;
-  bool _revealSecond = false;
-
+  // Betting
   int? _selectedBet;
   final List<int> _betValues = [50, 100, 200, 500];
+
+  // Animation flags (reset each turn)
+  bool _firstCardVisible = false;
+  bool _firstCardFaceUp = false;
+  bool _secondCardVisible = false;
+  bool _secondCardFaceUp = false;
+  bool _thirdCardDropped = false;
+
+  // Track current turn to detect changes
+  int _currentTurnIndex = -1;
+  int _currentCardCount = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = DaBankCoController(onStateChanged: _onGameStateChanged);
     _controller.startNewGame(startingPot: 0, customRoundContribution: 100);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _resetAndAnimateHumanCards();
-    });
   }
 
   void _onGameStateChanged() {
     if (!mounted) return;
     final state = _controller.state;
+
+    // Update bubble message and direction
     if (state.phase == DaBankCoPhase.round) {
       final currentPlayer = state.players[state.turnIndex];
       _bubbleArrowDirection = _seatIndexToDirection(currentPlayer.seatIndex);
@@ -58,7 +57,87 @@ class _PokerPageState2 extends State<PokerPage2> {
     if (newMsg.isNotEmpty && newMsg != "Start a new game.") {
       _showBubbleMessage(newMsg);
     }
+
+    // Handle turn changes and card additions BEFORE building UI
+    if (state.phase == DaBankCoPhase.round) {
+      final int turnIdx = state.turnIndex;
+      final int cardCount = state.players[turnIdx].cards.length;
+
+      // Check if turn changed
+      if (turnIdx != _currentTurnIndex) {
+        // New turn: reset animation and start fresh
+        _resetAnimation();
+        _currentTurnIndex = turnIdx;
+        _currentCardCount = cardCount;
+        if (cardCount >= 2) {
+          _startTurnAnimation();
+        }
+      } else if (cardCount != _currentCardCount) {
+        // Same turn, but card count changed (third card added)
+        _currentCardCount = cardCount;
+        if (cardCount == 3 && !_thirdCardDropped) {
+          _animateThirdCard();
+        }
+      }
+    } else {
+      // Not in round phase: reset tracking
+      _resetAnimation();
+      _currentTurnIndex = -1;
+      _currentCardCount = 0;
+    }
+
+    // Finally, rebuild UI
     setState(() {});
+  }
+
+  void _resetAnimation() {
+    _firstCardVisible = false;
+    _firstCardFaceUp = false;
+    _secondCardVisible = false;
+    _secondCardFaceUp = false;
+    _thirdCardDropped = false;
+  }
+
+  void _startTurnAnimation() {
+    // First card appears face down
+    _firstCardVisible = true;
+    _firstCardFaceUp = false;
+    // Second card not visible yet
+    _secondCardVisible = false;
+    _secondCardFaceUp = false;
+
+    // Schedule flip of first card after 300ms
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() => _firstCardFaceUp = true);
+      }
+    });
+
+    // Show second card (face down) after 600ms
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        setState(() {
+          _secondCardVisible = true;
+          _secondCardFaceUp = false;
+        });
+      }
+    });
+
+    // Flip second card after 900ms
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() => _secondCardFaceUp = true);
+      }
+    });
+  }
+
+  void _animateThirdCard() {
+    // Delay slightly to let the third card appear
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() => _thirdCardDropped = true);
+      }
+    });
   }
 
   void _showBubbleMessage(String msg) {
@@ -84,65 +163,29 @@ class _PokerPageState2 extends State<PokerPage2> {
     }
   }
 
-  void _resetAndAnimateHumanCards() {
-    setState(() {
-      _dealFirst = false;
-      _dealSecond = false;
-      _revealFirst = false;
-      _revealSecond = false;
-      _dropThirdCard = false;
-    });
-    Future.delayed(
-      const Duration(milliseconds: 300),
-      () => setState(() => _dealFirst = true),
-    );
-    Future.delayed(
-      const Duration(milliseconds: 800),
-      () => setState(() => _revealFirst = true),
-    );
-    Future.delayed(
-      const Duration(milliseconds: 900),
-      () => setState(() => _dealSecond = true),
-    );
-    Future.delayed(
-      const Duration(milliseconds: 1400),
-      () => setState(() => _revealSecond = true),
-    );
-  }
-
   void _placeBet(int amount) {
     _controller.placeHumanBet(amount);
     setState(() => _selectedBet = amount);
   }
 
   void _beginRound() => _controller.finishBettingAndBegin();
+
   void _bankCo() {
     _controller.bankCo();
-    setState(() => _dropThirdCard = false);
-    Future.delayed(
-      const Duration(milliseconds: 100),
-      () => setState(() => _dropThirdCard = true),
-    );
   }
 
   void _forLess() {
     int amount = _selectedBet ?? 50;
     _controller.forLess(amount);
-    setState(() => _dropThirdCard = false);
-    Future.delayed(
-      const Duration(milliseconds: 100),
-      () => setState(() => _dropThirdCard = true),
-    );
   }
 
-  void _pass() {
-    _controller.passTurn();
-    setState(() => _dropThirdCard = false);
-  }
+  void _pass() => _controller.passTurn();
 
-  void _resetRound() {
+  void _resetGame() {
     _controller.startNewGame(startingPot: 0, customRoundContribution: 100);
-    _resetAndAnimateHumanCards();
+    _resetAnimation();
+    _currentTurnIndex = -1;
+    _currentCardCount = 0;
     setState(() => _selectedBet = null);
   }
 
@@ -150,8 +193,24 @@ class _PokerPageState2 extends State<PokerPage2> {
       _controller.state.phase == DaBankCoPhase.round &&
       _controller.state.turnIndex == _controller.state.humanIndex;
 
+  bool _isGameOver() {
+    final human = _controller.state.players[_controller.state.humanIndex];
+    if (human.balance <= 0) return true;
+    if (_controller.state.phase == DaBankCoPhase.betting &&
+        human.balance < _controller.state.roundContribution) {
+      return true;
+    }
+    return false;
+  }
+
   double get height => MediaQuery.of(context).size.height;
   double get width => MediaQuery.of(context).size.width;
+  double _getTableScale(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double originalTableWidth = screenWidth * 2;
+    double desiredTableWidth = 600.0;
+    return desiredTableWidth / originalTableWidth;
+  }
 
   @override
   void dispose() {
@@ -164,11 +223,7 @@ class _PokerPageState2 extends State<PokerPage2> {
     double tableScale = _getTableScale(context);
     final state = _controller.state;
     final human = state.players[state.humanIndex];
-    final currentPlayer =
-        (state.phase == DaBankCoPhase.round &&
-            state.turnIndex < state.players.length)
-        ? state.players[state.turnIndex]
-        : null;
+    final gameOver = _isGameOver();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -209,7 +264,7 @@ class _PokerPageState2 extends State<PokerPage2> {
         child: GameBackground(
           child: Stack(
             children: [
-              // Player seats (circular avatars)
+              // Player seats
               Positioned(
                 left: -100,
                 right: -100,
@@ -223,7 +278,7 @@ class _PokerPageState2 extends State<PokerPage2> {
                         children: [
                           Center(
                             child: Image.asset(
-                              'lib/assets/images/GameTable.png',
+                              'lib/assets/images/GameTableTraditional .png',
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -268,8 +323,9 @@ class _PokerPageState2 extends State<PokerPage2> {
                 ),
               ),
 
-              // Central cards + action bubble
-              if (state.phase == DaBankCoPhase.round && currentPlayer != null)
+              // Centered cards (animated) for current player
+              if (state.phase == DaBankCoPhase.round &&
+                  state.turnIndex < state.players.length)
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -284,17 +340,21 @@ class _PokerPageState2 extends State<PokerPage2> {
                           ),
                         ),
                       const SizedBox(height: 20),
-                      _buildCentralCards(currentPlayer),
+                      _buildAnimatedCentralCards(
+                        state.players[state.turnIndex],
+                      ),
                     ],
                   ),
                 ),
 
-              // Bottom navigation bar
+              // Bottom navigation or game over
               Positioned(
                 bottom: 20,
                 left: 16,
                 right: 16,
-                child: _buildBottomNavBar(state, human),
+                child: gameOver
+                    ? _buildGameOverPanel()
+                    : _buildBottomNavBar(state, human),
               ),
             ],
           ),
@@ -303,7 +363,124 @@ class _PokerPageState2 extends State<PokerPage2> {
     );
   }
 
-  // ---------- Bottom Navigation Bar (fully themed) ----------
+  // ========== Added ValueKey to each CardWidget ==========
+  Widget _buildAnimatedCentralCards(DaBankCoPlayer player) {
+    final cards = player.cards;
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    final bool isCurrentTurn =
+        (player == _controller.state.players[_controller.state.turnIndex]);
+    final bool animate =
+        isCurrentTurn &&
+        (_firstCardVisible || _secondCardVisible || _thirdCardDropped);
+
+    final firstCard = cards[0];
+    final secondCard = cards[1];
+    final hasThird = cards.length == 3;
+    final thirdCard = hasThird ? cards[2] : null;
+
+    // Unique key based on player name and current turn index to force fresh widget
+    final String turnKey = '${player.name}_$_currentTurnIndex';
+
+    return Container(
+      key: ValueKey('container_$turnKey'),
+      margin: const EdgeInsets.symmetric(horizontal: 100),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.pureBlack.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppTheme.primaryGold, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // First card with unique key
+              AnimatedOpacity(
+                opacity: animate ? (_firstCardVisible ? 1.0 : 0.0) : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: CardWidget(
+                  key: ValueKey('first_$turnKey'),
+                  card: firstCard,
+                  isFaceUp: animate ? _firstCardFaceUp : true,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Second card with unique key
+              AnimatedOpacity(
+                opacity: animate ? (_secondCardVisible ? 1.0 : 0.0) : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: CardWidget(
+                  key: ValueKey('second_$turnKey'),
+                  card: secondCard,
+                  isFaceUp: animate ? _secondCardFaceUp : true,
+                ),
+              ),
+            ],
+          ),
+          if (hasThird) ...[
+            const SizedBox(height: 16),
+            AnimatedSlide(
+              offset: (animate && _thirdCardDropped)
+                  ? Offset.zero
+                  : const Offset(0, 2),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              child: CardWidget(
+                key: ValueKey('third_$turnKey'),
+                card: thirdCard!,
+                isFaceUp: true,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameOverPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.pureBlack.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryGold, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "GAME OVER",
+            style: AppTheme.headingSmall.copyWith(
+              color: AppTheme.highlightGold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "You have no chips left or cannot afford the contribution.",
+            style: AppTheme.bodyText,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _resetGame,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.emeraldGreen,
+              foregroundColor: AppTheme.pureBlack,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            ),
+            child: const Text(
+              "START NEW GAME",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomNavBar(DaBankCoGameState state, DaBankCoPlayer human) {
     if (state.phase == DaBankCoPhase.betting) {
       return Container(
@@ -356,7 +533,6 @@ class _PokerPageState2 extends State<PokerPage2> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGold,
                 foregroundColor: AppTheme.pureBlack,
-                textStyle: AppTheme.buttonText,
               ),
               child: const Text("Begin Round"),
             ),
@@ -405,11 +581,10 @@ class _PokerPageState2 extends State<PokerPage2> {
     }
 
     return ElevatedButton(
-      onPressed: _resetRound,
+      onPressed: _resetGame,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppTheme.darkEmerald,
         foregroundColor: AppTheme.primaryGold,
-        textStyle: AppTheme.buttonText,
       ),
       child: const Text("New Game"),
     );
@@ -427,68 +602,11 @@ class _PokerPageState2 extends State<PokerPage2> {
       child: Text(label),
     );
   }
-
-  Widget _buildCentralCards(DaBankCoPlayer player) {
-    final cards = player.cards;
-    if (cards.isEmpty) return const SizedBox.shrink();
-
-    final isHuman = !player.isAI;
-    final hasThird = cards.length == 3;
-    final firstCard = cards[0];
-    final secondCard = cards[1];
-    final thirdCard = hasThird ? cards[2] : null;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 100),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.pureBlack.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppTheme.primaryGold, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedOpacity(
-                opacity: isHuman ? (_dealFirst ? 1 : 0) : 1,
-                duration: const Duration(milliseconds: 300),
-                child: CardWidget(
-                  card: firstCard,
-                  isFaceUp: isHuman ? _revealFirst : true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              AnimatedOpacity(
-                opacity: isHuman ? (_dealSecond ? 1 : 0) : 1,
-                duration: const Duration(milliseconds: 300),
-                child: CardWidget(
-                  card: secondCard,
-                  isFaceUp: isHuman ? _revealSecond : true,
-                ),
-              ),
-            ],
-          ),
-          if (hasThird) ...[
-            const SizedBox(height: 16),
-            AnimatedSlide(
-              offset: isHuman
-                  ? (_dropThirdCard ? Offset.zero : const Offset(0, 2))
-                  : Offset.zero,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOut,
-              child: CardWidget(card: thirdCard!, isFaceUp: true),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
-// ---------- Player Info with transparent background box ----------
+// ------------------------------------------------------------
+// CompactPlayerInfo and ActionBubble (unchanged)
+// ------------------------------------------------------------
 class CompactPlayerInfo extends StatelessWidget {
   final DaBankCoPlayer player;
   final bool isCurrentTurn;
@@ -517,7 +635,6 @@ class CompactPlayerInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isHuman = !player.isAI;
-
     final avatar = Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -546,7 +663,6 @@ class CompactPlayerInfo extends StatelessWidget {
         ),
       ),
     );
-
     final info = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -571,7 +687,6 @@ class CompactPlayerInfo extends StatelessWidget {
         ],
       ),
     );
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: isHuman
@@ -581,7 +696,7 @@ class CompactPlayerInfo extends StatelessWidget {
   }
 }
 
-// ---------- Action Bubble (themed, with wrap support) ----------
+// =============== Display player info with avatar on the table, with highlight for current turn ===============
 class ActionBubble extends StatelessWidget {
   final String message;
   final PointerDirection pointerDirection;
@@ -592,10 +707,28 @@ class ActionBubble extends StatelessWidget {
     required this.pointerDirection,
   });
 
+  TextStyle _getMessageStyle() {
+    if (message.contains('won') || message.contains('wins')) {
+      return AppTheme.captionGold.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppTheme.win,
+      );
+    } else if (message.contains('loses') || message.contains('lost')) {
+      return AppTheme.captionGold.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppTheme.lose,
+      );
+    } else {
+      return AppTheme.captionGold.copyWith(fontSize: 12);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 280), // prevents overflow
+      constraints: const BoxConstraints(maxWidth: 280),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.pureBlack.withOpacity(0.85),
@@ -609,11 +742,7 @@ class ActionBubble extends StatelessWidget {
           _buildArrow(),
           const SizedBox(width: 12),
           Flexible(
-            child: Text(
-              message,
-              style: AppTheme.captionGold.copyWith(fontSize: 12),
-              softWrap: true,
-            ),
+            child: Text(message, style: _getMessageStyle(), softWrap: true),
           ),
         ],
       ),
