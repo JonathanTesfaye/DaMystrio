@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/auth/ui/loginPage.dart';
 import 'package:flutter_application_1/firebase_options.dart';
-import 'package:flutter_application_1/features/bankCo/ui/Poker.dart';
 import 'package:flutter_application_1/features/auth/authWrapper.dart';
 import 'package:flutter_application_1/features/home/ui/homePage.dart';
 

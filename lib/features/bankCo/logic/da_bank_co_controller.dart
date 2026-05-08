@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/models/cardModel.dart';
-import 'package:flutter_application_1/features/bankCo/da_bank_co_state.dart';
+import 'package:flutter_application_1/features/bankCo/logic/da_bank_co_state.dart';
 
 class DaBankCoController {
   DaBankCoGameState _state;
