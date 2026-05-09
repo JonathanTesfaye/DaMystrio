@@ -6,32 +6,20 @@ import 'package:flutter_application_1/features/leaderboard/ui/leaderboardPage.da
 import 'package:flutter_application_1/features/mission/ui/mission.dart';
 import 'package:flutter_application_1/features/leaderboard/ui/Leaderboard.dart';
 
-class BottomPanel extends StatefulWidget {
-  const BottomPanel({super.key});
+class BottomPanel extends StatelessWidget {
+  final int selectedModeIndex; // 0 = BankCo, 1 = Injera, 2 = Pass & Play
+  final ValueChanged<int> onModeSelected;
 
-  @override
-  State<BottomPanel> createState() => _BottomPanelState();
-}
-
-class _BottomPanelState extends State<BottomPanel> {
-  int _selectedModeIndex = 0; // 0 = BankCo, 1 = Injera be Wot (coming soon)
-
-  void _onModeTap(int index) {
-    if (index == 1) return; // coming soon – no action
-    setState(() {
-      _selectedModeIndex = index;
-    });
-    // Optional: navigate or trigger game start for BankCo
-    if (index == 0) {
-      // Example: Navigator.push(context, MaterialPageRoute(builder: (_) => PokerPage2()));
-      print("BankCo selected");
-    }
-  }
+  const BottomPanel({
+    super.key,
+    required this.selectedModeIndex,
+    required this.onModeSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 260,
+      height: 320,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface.withOpacity(0.6),
@@ -52,11 +40,11 @@ class _BottomPanelState extends State<BottomPanel> {
             ),
             const SizedBox(height: 10),
             GameModeButton(
-              title: "BankCo",
+              title: "BankCo Vs Bot",
               subtitle: "100 chip entry",
               icon: Icons.emoji_events,
-              isSelected: _selectedModeIndex == 0,
-              onTap: () => _onModeTap(0),
+              isSelected: selectedModeIndex == 0,
+              onTap: () => onModeSelected(0),
             ),
             const SizedBox(height: 10),
             GameModeButton(
@@ -64,14 +52,27 @@ class _BottomPanelState extends State<BottomPanel> {
               subtitle: "Coming Soon",
               icon: Icons.emoji_events,
               isComingSoon: true,
-              isSelected: false,
-              onTap: null,
+              isSelected: selectedModeIndex == 1,
+              onTap: () => onModeSelected(1),
+            ),
+            const SizedBox(height: 10),
+            GameModeButton(
+              title: "BankCo Pass & Play",
+              subtitle: "Local multiplayer",
+              icon: Icons.people,
+              isSelected: selectedModeIndex == 2,
+              onTap: () => onModeSelected(2),
             ),
             const SizedBox(height: 10),
             Divider(
               color: AppTheme.primaryGold.withOpacity(0.5),
               thickness: 1.5,
               height: 0,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Activities',
+              style: AppTheme.headingMedium.copyWith(fontSize: 20),
             ),
             const SizedBox(height: 10),
             GestureDetector(
