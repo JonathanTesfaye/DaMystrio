@@ -55,29 +55,31 @@ class PnPController {
   }
 
   // ---------- Betting Phase ----------
-  void placeBet(int amount) {
+  bool placeBet(int amount) {
     if (_state.phase != GamePhase.betting) {
       _setMessage("Not betting phase.");
-      return;
+      return false;
     }
     if (_state.bettingPlayerIndex >= _state.players.length) {
+      // Betting already complete – should start round
       _startRound();
-      return;
+      return false;
     }
     final player = _state.players[_state.bettingPlayerIndex];
     if (player.balance <= 0) {
       _setMessage("${player.name} has no chips and cannot bet.");
       _nextBettingPlayer();
-      return;
+      return false;
     }
     if (amount <= 0 || amount > player.balance) {
-      _setMessage("Invalid bet amount.");
-      return;
+      _setMessage("Invalid bet amount. Max: ${player.balance}");
+      return false;
     }
     player.bet = amount;
     _setMessage("${player.name} bets $amount chips.");
     onStateChanged();
     _nextBettingPlayer();
+    return true;
   }
 
   void _nextBettingPlayer() {
@@ -248,7 +250,6 @@ class PnPController {
       phase: GamePhase.betting,
       currentPlayerIndex: 0,
       bettingPlayerIndex: 0,
-      pot: 0,
     );
     _applyRoundContribution();
     _setMessage(

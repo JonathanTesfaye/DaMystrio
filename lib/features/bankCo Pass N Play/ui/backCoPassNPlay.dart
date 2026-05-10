@@ -30,7 +30,6 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
   void initState() {
     super.initState();
     _controller = PnPController(onStateChanged: _onGameStateChanged);
-    // Delay dialog to avoid build conflicts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isSetupDialogShowing) {
         _showPlayerSetupDialog();
@@ -84,7 +83,6 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
     final List<TextEditingController> nameControllers = [];
     final formKey = GlobalKey<FormState>();
 
-    // Pre-fill with default names
     for (int i = 0; i < playerCount; i++) {
       nameControllers.add(TextEditingController(text: "Player ${i + 1}"));
     }
@@ -168,17 +166,65 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
   }
 
   void _placeBet(int amount) {
-    final state = _controller.state;
-    if (state.phase != GamePhase.betting) return;
-    if (state.bettingPlayerIndex >= state.players.length) return;
-    _controller.placeBet(amount);
-    setState(() => _selectedBet = amount);
+    bool success = _controller.placeBet(amount);
+    if (success) {
+      setState(() => _selectedBet = amount);
+    }
   }
 
   void _bankCo() => _controller.bankCo();
-  void _forLess() {
-    int amount = _selectedBet ?? 50;
-    _controller.forLess(amount);
+
+  // NEW: Show dialog to enter For Less amount
+  Future<void> _forLess() async {
+    final TextEditingController amountController = TextEditingController(
+      text: "50",
+    );
+    final currentPlayer = _controller.state.currentPlayer;
+    final maxAmount = currentPlayer.balance;
+
+    final int? amount = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("For Less Amount"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Your balance: $maxAmount chips", style: AppTheme.captionGold),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "Chips to risk"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final int? risk = int.tryParse(amountController.text);
+              if (risk != null && risk > 0) {
+                Navigator.pop(ctx, risk);
+              } else {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text("Enter a valid positive amount"),
+                  ),
+                );
+              }
+            },
+            child: const Text("Risk"),
+          ),
+        ],
+      ),
+    );
+
+    if (amount != null) {
+      _controller.forLess(amount);
+    }
   }
 
   void _pass() => _controller.passTurn();
@@ -202,7 +248,6 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
   Widget build(BuildContext context) {
     final state = _controller.state;
 
-    // CRITICAL: If no players, show loading (should not happen after setup)
     if (state.players.isEmpty) {
       return Scaffold(
         extendBodyBehindAppBar: true,
@@ -236,10 +281,31 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
     final tableScale = _getTableScale(context);
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
-
     final playersBySeat = {for (var p in state.players) p.seatIndex: p};
 
+    // Determine current player name for turn banners
+    String currentActivePlayer = "";
+    bool showBettingBanner = false;
+    bool showRoundBanner = false;
+    if (state.phase == GamePhase.betting &&
+        state.players.isNotEmpty &&
+        state.bettingPlayerIndex < state.players.length) {
+      currentActivePlayer = state.players[state.bettingPlayerIndex].name;
+      showBettingBanner = true;
+    } else if (state.phase == GamePhase.round && state.players.isNotEmpty) {
+      currentActivePlayer = state.currentPlayer.name;
+      showRoundBanner = true;
+    }
+
     return Scaffold(
+      floatingActionButton: (!gameOver && state.phase != GamePhase.setup)
+          ? FloatingActionButton(
+              onPressed: () => _showPlayerSetupDialog(),
+              backgroundColor: AppTheme.emeraldGreen,
+              child: const Icon(Icons.refresh),
+              tooltip: "New Game",
+            )
+          : null,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -342,12 +408,58 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
                 ),
               ),
 
-              // Animated cards
+              // Turn indicator banner (betting phase) – centered at top
+              if (showBettingBanner)
+                Positioned(
+                  top: 80,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGold.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        "$currentActivePlayer's bet",
+                        style: AppTheme.bodyText.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.pureBlack,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Animated cards + round banner
               if (state.phase == GamePhase.round && state.players.isNotEmpty)
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (showRoundBanner)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGold.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            "$currentActivePlayer's turn",
+                            style: AppTheme.bodyText.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.pureBlack,
+                            ),
+                          ),
+                        ),
                       if (_bubbleMessage != null)
                         AnimatedOpacity(
                           opacity: 1.0,
@@ -368,7 +480,7 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
                   ),
                 ),
 
-              // Bottom bar
+              // Bottom action bar
               Positioned(
                 bottom: 20,
                 left: 16,
@@ -432,12 +544,9 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
 
   Widget _buildBottomActionBar() {
     final state = _controller.state;
-
-    // Extra safety: if no players, return empty
     if (state.players.isEmpty) return const SizedBox.shrink();
 
     if (state.phase == GamePhase.betting) {
-      // Ensure bettingPlayerIndex is valid
       if (state.bettingPlayerIndex >= state.players.length) {
         return const SizedBox.shrink();
       }

@@ -29,34 +29,60 @@ class CompactPlayerInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: isCurrentTurn
-            ? [
-                BoxShadow(
-                  color: AppTheme.primaryGold.withOpacity(0.8),
-                  blurRadius: 12,
-                  spreadRadius: 4,
-                ),
-              ]
-            : [],
-      ),
-      child: ClipOval(
-        child: Container(
-          width: 70,
-          height: 70,
-          color: AppTheme.surface,
-          child: Image.asset(
-            _getAvatarPath(),
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(Icons.person, color: AppTheme.primaryGold, size: 35);
-            },
+    final avatar = Stack(
+      alignment: Alignment.topRight,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: isCurrentTurn
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryGold.withOpacity(0.8),
+                      blurRadius: 12,
+                      spreadRadius: 4,
+                    ),
+                  ]
+                : [],
+          ),
+          child: ClipOval(
+            child: Container(
+              width: 70,
+              height: 70,
+              color: AppTheme.surface,
+              child: Image.asset(
+                _getAvatarPath(),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.person,
+                    color: AppTheme.primaryGold,
+                    size: 35,
+                  );
+                },
+              ),
+            ),
           ),
         ),
-      ),
+        if (player.balance <= 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              "ELIMINATED",
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+      ],
     );
+
     final info = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -81,9 +107,7 @@ class CompactPlayerInfo extends StatelessWidget {
         ],
       ),
     );
-    // For pass-and-play, we don't have AI vs human distinction, always show info below avatar?
-    // Original had isHuman logic, but here all are human, so we can just show info below avatar.
-    // But to match layout, we'll put info below avatar for all.
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [avatar, const SizedBox(height: 6), info],
