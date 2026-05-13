@@ -1,15 +1,75 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/core/services/PlayerLocalServices.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/aboutUs/aboutUsPage.dart';
 import 'package:flutter_application_1/features/myAccount/myAccountPage.dart';
-import 'package:flutter_application_1/features/settings/settingsPage.dart'; // ✅ verify this path
+import 'package:flutter_application_1/features/settings/settingsPage.dart';
 
-class PlayerInfo extends StatelessWidget {
-  final User? user;
-  final VoidCallback onLogout;
+class PlayerInfo extends StatefulWidget {
+  final VoidCallback onChangeName;
 
-  const PlayerInfo({super.key, required this.user, required this.onLogout});
+  const PlayerInfo({super.key, required this.onChangeName});
+
+  @override
+  State<PlayerInfo> createState() => _PlayerInfoState();
+}
+
+class _PlayerInfoState extends State<PlayerInfo> {
+  String _displayName = "Player";
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadName();
+  }
+
+  Future<void> _loadName() async {
+    final name = await PlayerLocalService.getDisplayName();
+    if (mounted) {
+      setState(() {
+        _displayName = name;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _changeName() async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Change Name"),
+        content: TextField(
+          controller: TextEditingController(text: _displayName),
+          decoration: const InputDecoration(labelText: "Your name"),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(
+              ctx,
+              (ctx as dynamic)
+                  .findAncestorWidgetOfExactType<TextField>()
+                  ?.controller
+                  ?.text,
+            ),
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+    if (newName != null && newName.isNotEmpty && newName != _displayName) {
+      await PlayerLocalService.setDisplayName(newName);
+      setState(() {
+        _displayName = newName;
+      });
+      widget.onChangeName();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +94,7 @@ class PlayerInfo extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                user?.displayName ?? 'Player',
+                _displayName,
                 style: AppTheme.headingMedium.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 4),
@@ -56,34 +116,25 @@ class PlayerInfo extends StatelessWidget {
             onSelected: (value) {
               switch (value) {
                 case 'my_account':
-                  // ✅ Safe navigation with error handling
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          MyAccountPage(), // just an empty container, no custom page
-                    ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyAccountPage()),
                   );
                   break;
                 case 'settings':
-                  // TODO: Navigate to SettingsPage
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          SettingsPage(), // just an empty container, no custom page
-                    ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsPage()),
                   );
                   break;
                 case 'about_us':
-                  // TODO: Navigate to AboutUsPage
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          AboutUsPage(), // just an empty container, no custom page
-                    ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AboutUsPage()),
                   );
                   break;
-                case 'logout':
-                  onLogout();
+                case 'change_name':
+                  _changeName();
                   break;
               }
             },
@@ -117,10 +168,10 @@ class PlayerInfo extends StatelessWidget {
               ),
               const PopupMenuDivider(),
               const PopupMenuItem<String>(
-                value: 'logout',
+                value: 'change_name',
                 child: ListTile(
-                  leading: Icon(Icons.logout, color: AppTheme.lose),
-                  title: Text('Logout', style: TextStyle(color: AppTheme.lose)),
+                  leading: Icon(Icons.edit, color: AppTheme.highlightGold),
+                  title: Text('Change Name'),
                   dense: true,
                 ),
               ),
@@ -139,17 +190,11 @@ class PlayerInfo extends StatelessWidget {
               child: CircleAvatar(
                 radius: 28,
                 backgroundColor: AppTheme.surface,
-                backgroundImage: user?.photoURL != null
-                    ? NetworkImage(user!.photoURL!)
-                    : const AssetImage('assets/images/default_avatar.png')
-                          as ImageProvider,
-                child: user?.photoURL == null
-                    ? const Icon(
-                        Icons.person,
-                        color: AppTheme.primaryGold,
-                        size: 28,
-                      )
-                    : null,
+                child: const Icon(
+                  Icons.person,
+                  color: AppTheme.primaryGold,
+                  size: 28,
+                ),
               ),
             ),
           ),

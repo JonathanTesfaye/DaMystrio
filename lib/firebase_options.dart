@@ -41,48 +41,54 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDxM2S06g-V0hrc-LjUgVUzId0dWyNhtrE',
-    appId: '1:374880543559:web:56eb6c65d36bc55b736262',
-    messagingSenderId: '374880543559',
-    projectId: 'damystrio',
-    authDomain: 'damystrio.firebaseapp.com',
-    storageBucket: 'damystrio.firebasestorage.app',
-    measurementId: 'G-XFTLVF0XWY',
+    apiKey: 'AIzaSyDgZfduF2M97IxsstDl9gneBgFWXg1ooL8',
+    appId: '1:813391034255:web:0a2269474639c64aa17dfa',
+    messagingSenderId: '813391034255',
+    projectId: 'bank-co-61d86',
+    authDomain: 'bank-co-61d86.firebaseapp.com',
+    databaseURL: 'https://bank-co-61d86-default-rtdb.firebaseio.com',
+    storageBucket: 'bank-co-61d86.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD8IP0vsr_pjlJnAe7SOSyX8uKHm2OarLk',
-    appId: '1:374880543559:android:e7b866b277c7c7c9736262',
-    messagingSenderId: '374880543559',
-    projectId: 'damystrio',
-    storageBucket: 'damystrio.firebasestorage.app',
+    apiKey: 'AIzaSyCV-0aRzrn1be9hpodmScqeo8rIn5pySC4',
+    appId: '1:813391034255:android:dbb1f60c41416223a17dfa',
+    messagingSenderId: '813391034255',
+    projectId: 'bank-co-61d86',
+    databaseURL: 'https://bank-co-61d86-default-rtdb.firebaseio.com',
+    storageBucket: 'bank-co-61d86.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB2pLRvz44RaiItzlNC3lyVp3WERQarZtg',
-    appId: '1:374880543559:ios:178580423314e44f736262',
-    messagingSenderId: '374880543559',
-    projectId: 'damystrio',
-    storageBucket: 'damystrio.firebasestorage.app',
+    apiKey: 'AIzaSyCaJsF3m9kOhHTUqQonQ4q5BB5Jv9XEvZw',
+    appId: '1:813391034255:ios:0c87b019d3e51874a17dfa',
+    messagingSenderId: '813391034255',
+    projectId: 'bank-co-61d86',
+    databaseURL: 'https://bank-co-61d86-default-rtdb.firebaseio.com',
+    storageBucket: 'bank-co-61d86.firebasestorage.app',
+    iosClientId: '813391034255-6irptsa7372ico8rjn7eobok2emchek3.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication1',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyB2pLRvz44RaiItzlNC3lyVp3WERQarZtg',
-    appId: '1:374880543559:ios:178580423314e44f736262',
-    messagingSenderId: '374880543559',
-    projectId: 'damystrio',
-    storageBucket: 'damystrio.firebasestorage.app',
+    apiKey: 'AIzaSyCaJsF3m9kOhHTUqQonQ4q5BB5Jv9XEvZw',
+    appId: '1:813391034255:ios:0c87b019d3e51874a17dfa',
+    messagingSenderId: '813391034255',
+    projectId: 'bank-co-61d86',
+    databaseURL: 'https://bank-co-61d86-default-rtdb.firebaseio.com',
+    storageBucket: 'bank-co-61d86.firebasestorage.app',
+    iosClientId: '813391034255-6irptsa7372ico8rjn7eobok2emchek3.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication1',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDxM2S06g-V0hrc-LjUgVUzId0dWyNhtrE',
-    appId: '1:374880543559:web:e3a1d49c4429331d736262',
-    messagingSenderId: '374880543559',
-    projectId: 'damystrio',
-    authDomain: 'damystrio.firebaseapp.com',
-    storageBucket: 'damystrio.firebasestorage.app',
-    measurementId: 'G-09YV38Q2DX',
+    apiKey: 'AIzaSyDgZfduF2M97IxsstDl9gneBgFWXg1ooL8',
+    appId: '1:813391034255:web:8419eff41a1777cba17dfa',
+    messagingSenderId: '813391034255',
+    projectId: 'bank-co-61d86',
+    authDomain: 'bank-co-61d86.firebaseapp.com',
+    databaseURL: 'https://bank-co-61d86-default-rtdb.firebaseio.com',
+    storageBucket: 'bank-co-61d86.firebasestorage.app',
   );
+
 }

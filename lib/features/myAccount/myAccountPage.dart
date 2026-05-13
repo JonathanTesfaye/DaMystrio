@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_application_1/core/services/PlayerLocalServices.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
-import 'package:flutter_application_1/core/widgets/custom_textfeild.dart'; // adjust path if needed
+import 'package:flutter_application_1/core/widgets/custom_textfeild.dart';
 
 class MyAccountPage extends StatefulWidget {
   const MyAccountPage({super.key});
@@ -11,11 +11,9 @@ class MyAccountPage extends StatefulWidget {
 }
 
 class _MyAccountPageState extends State<MyAccountPage> {
-  User? _user; // nullable
   bool _isLoading = false;
   bool _isEditing = false;
   late TextEditingController _displayNameController;
-  late TextEditingController _phoneController;
 
   int _chipsBalance = 1250000;
   int _winCount = 342;
@@ -25,25 +23,27 @@ class _MyAccountPageState extends State<MyAccountPage> {
   @override
   void initState() {
     super.initState();
-    _user = FirebaseAuth.instance.currentUser;
-    _displayNameController = TextEditingController(
-      text: _user?.displayName ?? '',
-    );
-    _phoneController = TextEditingController(text: _user?.phoneNumber ?? '');
+    _loadName();
+  }
+
+  Future<void> _loadName() async {
+    final name = await PlayerLocalService.getDisplayName();
+    _displayNameController = TextEditingController(text: name);
+    setState(() {});
   }
 
   @override
   void dispose() {
     _displayNameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
   Future<void> _updateProfile() async {
-    if (_user == null) return;
     setState(() => _isLoading = true);
     try {
-      await _user!.updateDisplayName(_displayNameController.text.trim());
+      await PlayerLocalService.setDisplayName(
+        _displayNameController.text.trim(),
+      );
       setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
@@ -57,76 +57,8 @@ class _MyAccountPageState extends State<MyAccountPage> {
     }
   }
 
-  Future<void> _confirmDeleteAccount() async {
-    if (_user == null) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(
-          'Delete Account',
-          style: AppTheme.headingMedium.copyWith(fontSize: 20),
-        ),
-        content: Text(
-          'Are you sure? This action is permanent and cannot be undone.',
-          style: AppTheme.bodyText,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: AppTheme.bodyText),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Delete',
-              style: AppTheme.bodyText.copyWith(color: AppTheme.lose),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      setState(() => _isLoading = true);
-      try {
-        await _user!.delete();
-        await FirebaseAuth.instance.signOut();
-        if (mounted) {
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/login', (route) => false);
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      } finally {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_user == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.richBlack,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('No user logged in', style: AppTheme.bodyText),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Go Back'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: AppTheme.richBlack,
       appBar: AppBar(
@@ -158,24 +90,19 @@ class _MyAccountPageState extends State<MyAccountPage> {
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
+                    child: const CircleAvatar(
                       radius: 60,
                       backgroundColor: AppTheme.surface,
-                      backgroundImage: _user!.photoURL != null
-                          ? NetworkImage(_user!.photoURL!)
-                          : null,
-                      child: _user!.photoURL == null
-                          ? Icon(
-                              Icons.person,
-                              size: 60,
-                              color: AppTheme.primaryGold,
-                            )
-                          : null,
+                      child: Icon(
+                        Icons.person,
+                        size: 60,
+                        color: AppTheme.primaryGold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    _user!.email ?? 'No email',
+                    'Local Player',
                     style: AppTheme.bodyText.copyWith(fontSize: 16),
                   ),
                   const SizedBox(height: 32),
@@ -184,11 +111,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       hintText: 'Display Name',
                       icon: Icons.person,
                       controller: _displayNameController,
-                    ),
-                    CustomTextfeild(
-                      hintText: 'Phone Number',
-                      icon: Icons.phone,
-                      controller: _phoneController,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -216,18 +138,14 @@ class _MyAccountPageState extends State<MyAccountPage> {
                     _buildInfoTile(
                       Icons.badge,
                       'Display Name',
-                      _user!.displayName ?? 'Not set',
+                      _displayNameController.text,
                     ),
                     _buildInfoTile(
                       Icons.email,
                       'Email',
-                      _user!.email ?? 'Not set',
+                      'Not available (local only)',
                     ),
-                    _buildInfoTile(
-                      Icons.phone,
-                      'Phone',
-                      _user!.phoneNumber ?? 'Not set',
-                    ),
+                    _buildInfoTile(Icons.phone, 'Phone', 'Not available'),
                     const Divider(color: AppTheme.primaryGold, height: 32),
                     Text(
                       'Game Statistics',
@@ -259,17 +177,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
                         minimumSize: const Size(double.infinity, 50),
                         backgroundColor: AppTheme.emeraldGreen,
                         foregroundColor: AppTheme.offWhite,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: _confirmDeleteAccount,
-                      icon: const Icon(Icons.delete_forever),
-                      label: const Text('Delete Account'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        side: const BorderSide(color: AppTheme.lose),
-                        foregroundColor: AppTheme.lose,
                       ),
                     ),
                   ],

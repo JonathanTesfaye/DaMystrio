@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
+import 'package:flutter_application_1/features/bankCo%20Pass%20N%20Play/ui/MultiplayerPage.dart';
+import 'package:flutter_application_1/features/bankCo%20Pass%20N%20Play/ui/firestoreTableTest.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/gameModeButton.dart';
 import 'package:flutter_application_1/features/mission/ui/dailyMission.dart';
 import 'package:flutter_application_1/features/leaderboard/ui/leaderboardPage.dart';
@@ -7,7 +9,7 @@ import 'package:flutter_application_1/features/mission/ui/mission.dart';
 import 'package:flutter_application_1/features/leaderboard/ui/Leaderboard.dart';
 
 class BottomPanel extends StatelessWidget {
-  final int selectedModeIndex; // 0 = BankCo, 1 = Injera, 2 = Pass & Play
+  final int selectedModeIndex; // 0 = BankCo Vs Bot, 1 = Injera, 2 = Pass & Play
   final ValueChanged<int> onModeSelected;
 
   const BottomPanel({
@@ -19,7 +21,7 @@ class BottomPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 320,
+      height: 360,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface.withOpacity(0.6),
@@ -64,6 +66,36 @@ class BottomPanel extends StatelessWidget {
               onTap: () => onModeSelected(2),
             ),
             const SizedBox(height: 10),
+            GameModeButton(
+              title: "RTDB Test",
+              subtitle: "tbl_full",
+              icon: Icons.cloud_queue,
+              isSelected: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RtdbTableTestPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+            GameModeButton(
+              title: "Multiplayer (Beta)",
+              subtitle: "tbl_full",
+              icon: Icons.cloud_queue,
+              isSelected: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const MultiplayerGamePage(tableId: 'tbl_full'),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
             Divider(
               color: AppTheme.primaryGold.withOpacity(0.5),
               thickness: 1.5,

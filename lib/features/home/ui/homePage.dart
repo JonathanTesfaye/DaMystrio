@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/bankCo/ui/backCo.dart';
 import 'package:flutter_application_1/features/bankCo%20Pass%20N%20Play/ui/backCoPassNPlay.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/bottomPanel.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/playButton.dart';
 import 'package:flutter_application_1/features/home/ui/widgets/playerInfo.dart';
-import '../../../core/services/auth_service.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({super.key});
@@ -16,8 +14,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final AuthService authService = AuthService();
-  int _selectedModeIndex = 0; // 0 = BankCo, 1 = Injera, 2 = Pass & Play
+  int _selectedModeIndex =
+      0; // 0 = BankCo, 1 = Injera, 2 = Pass & Play, 3 = Play Online
 
   void _onModeSelected(int index) {
     setState(() {
@@ -44,13 +42,16 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(builder: (_) => const PassNPlayPage()),
       );
+    } else if (_selectedModeIndex == 3) {
+      // TODO: Navigate to multiplayer lobby when ready
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Online Multiplayer – Coming Soon")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Scaffold(
       body: SafeArea(
         child: Container(
@@ -70,9 +71,9 @@ class _HomePageState extends State<HomePage> {
                 left: 0,
                 right: 0,
                 child: PlayerInfo(
-                  user: user,
-                  onLogout: () async {
-                    await authService.signOut();
+                  onChangeName: () async {
+                    // Refresh UI after name change
+                    setState(() {});
                   },
                 ),
               ),
