@@ -471,9 +471,7 @@ class _PassNPlayPageState extends State<PassNPlayPage> {
                         ),
                       const SizedBox(height: 20),
                       AnimatedCentralCards(
-                        key: ValueKey(
-                          'cards_${state.currentPlayerIndex}_${state.roundContribution}',
-                        ),
+                        key: ValueKey(state.currentPlayerIndex),
                         player: state.currentPlayer,
                       ),
                     ],
