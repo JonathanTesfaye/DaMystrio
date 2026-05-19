@@ -45,6 +45,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_database: ^11.3.10
   path_provider: ^2.1.0
+  firebase_auth: ^5.7.0
 
 dev_dependencies:
   flutter_test:

@@ -3,17 +3,21 @@ import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/bankCo%20Pass%20N%20Play/logic/da_bank_co_PnP_state.dart';
 
 class CompactPlayerInfo extends StatelessWidget {
-  final PnPPlayer player;
+  final PnPPlayer? player;
+  final int? seatIndex;
   final bool isCurrentTurn;
+  final bool isReady;
 
   const CompactPlayerInfo({
     super.key,
-    required this.player,
+    this.player,
+    this.seatIndex,
     required this.isCurrentTurn,
+    this.isReady = false,
   });
 
-  String _getAvatarPath() {
-    switch (player.seatIndex) {
+  String _getAvatarPath(int index) {
+    switch (index) {
       case 0:
         return 'assets/images/avatar1.png';
       case 1:
@@ -29,6 +33,58 @@ class CompactPlayerInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Placeholder (no player)
+    if (player == null) {
+      final seatIdx = seatIndex ?? 0;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: isCurrentTurn
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.primaryGold.withOpacity(0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: ClipOval(
+              child: Container(
+                width: 70,
+                height: 70,
+                color: AppTheme.surface.withOpacity(0.5),
+                child: Image.asset(
+                  _getAvatarPath(seatIdx),
+                  fit: BoxFit.cover,
+                  color: Colors.grey,
+                  colorBlendMode: BlendMode.saturation,
+                  errorBuilder: (_, __, ___) =>
+                      Icon(Icons.person_outline, color: Colors.grey, size: 35),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.pureBlack.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              "Waiting...",
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Real player
     final avatar = Stack(
       alignment: Alignment.topRight,
       children: [
@@ -51,20 +107,15 @@ class CompactPlayerInfo extends StatelessWidget {
               height: 70,
               color: AppTheme.surface,
               child: Image.asset(
-                _getAvatarPath(),
+                _getAvatarPath(player!.seatIndex),
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.person,
-                    color: AppTheme.primaryGold,
-                    size: 35,
-                  );
-                },
+                errorBuilder: (_, __, ___) =>
+                    Icon(Icons.person, color: AppTheme.primaryGold, size: 35),
               ),
             ),
           ),
         ),
-        if (player.balance <= 0)
+        if (player!.balance <= 0)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -80,6 +131,19 @@ class CompactPlayerInfo extends StatelessWidget {
               ),
             ),
           ),
+        if (isReady)
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const Icon(Icons.check, size: 16, color: Colors.white),
+            ),
+          ),
       ],
     );
 
@@ -93,15 +157,15 @@ class CompactPlayerInfo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            player.name,
+            player!.name,
             style: AppTheme.bodyText.copyWith(fontWeight: FontWeight.bold),
           ),
           Text(
-            "Chips: ${player.balance}",
+            "Chips: ${player!.balance}",
             style: AppTheme.captionGold.copyWith(fontSize: 12),
           ),
           Text(
-            "Bait: ${player.bet}",
+            "Bait: ${player!.bet}",
             style: AppTheme.bodyText.copyWith(fontSize: 12),
           ),
         ],

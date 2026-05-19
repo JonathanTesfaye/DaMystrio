@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/services/authService.dart';
 import 'package:flutter_application_1/features/auth/ui/widgets/auth_card.dart';
 import 'package:flutter_application_1/features/auth/register_form.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_application_1/features/home/ui/homePage.dart';
-import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'loginPage.dart';
 
