@@ -38,6 +38,12 @@ class UserService {
     return null;
   }
 
+  /// Update username
+  /// Update username (display name)
+  Future<void> updateUsername(String uid, String newUsername) async {
+    await _db.child('users/$uid/username').set(newUsername);
+  }
+
   /// Update user chips after a game
   Future<void> updateChips(String uid, int newChips) async {
     await _db.child('users/$uid/chips').set(newChips);

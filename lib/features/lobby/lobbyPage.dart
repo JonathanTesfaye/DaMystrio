@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_application_1/core/services/authService.dart';
+import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/features/bankCo%20Online/bankCoOnlineTable.dart';
 import 'package:flutter_application_1/features/lobby/model/lobbyTable.dart';
-import 'package:firebase_database/firebase_database.dart';
 
 class LobbyPage extends StatefulWidget {
   const LobbyPage({super.key});
@@ -19,9 +20,13 @@ class _LobbyPageState extends State<LobbyPage> {
   );
   final DatabaseReference _tablesRef = FirebaseDatabase.instance.ref('tables');
   final AuthService _auth = AuthService();
+  final Random _random = Random();
+
   List<LobbyTable> _tables = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
   StreamSubscription<DatabaseEvent>? _activeTablesSubscription;
+  int _totalPlayersOnline = 0;
 
   @override
   void initState() {
@@ -30,7 +35,6 @@ class _LobbyPageState extends State<LobbyPage> {
   }
 
   void _listenToActiveTables() {
-    // Query waiting tables, limit to 20
     _activeTablesSubscription = _activeTablesRef
         .orderByChild('status')
         .equalTo('waiting')
@@ -40,23 +44,37 @@ class _LobbyPageState extends State<LobbyPage> {
           (event) {
             final data = event.snapshot.value as Map<dynamic, dynamic>?;
             final List<LobbyTable> loaded = [];
+            int totalPlayers = 0;
             if (data != null) {
               data.forEach((key, value) {
                 final tableId = key.toString();
-                final map = value as Map<dynamic, dynamic>; // direct cast
-                loaded.add(LobbyTable.fromJson(tableId, map));
+                final map = Map<String, dynamic>.from(value as Map);
+                final table = LobbyTable.fromJson(tableId, map);
+                loaded.add(table);
+                totalPlayers += table.currentPlayerCount;
               });
             }
             setState(() {
               _tables = loaded;
+              _totalPlayersOnline = totalPlayers;
               _isLoading = false;
+              _isRefreshing = false;
             });
           },
           onError: (error) {
             print("Firebase error: $error");
-            setState(() => _isLoading = false);
+            setState(() {
+              _isLoading = false;
+              _isRefreshing = false;
+            });
           },
         );
+  }
+
+  Future<void> _refreshTables() async {
+    setState(() => _isRefreshing = true);
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) setState(() => _isRefreshing = false);
   }
 
   Future<void> _createGame(String gameName) async {
@@ -65,103 +83,100 @@ class _LobbyPageState extends State<LobbyPage> {
 
     final newTableRef = _tablesRef.push();
     final tableId = newTableRef.key!;
+    final now = ServerValue.timestamp;
 
-    // Full table data – exactly matching the web schema
+    // Build and shuffle the deck
+    final List<String> cards = [
+      "A♠",
+      "2♠",
+      "3♠",
+      "4♠",
+      "5♠",
+      "6♠",
+      "7♠",
+      "8♠",
+      "9♠",
+      "10♠",
+      "J♠",
+      "Q♠",
+      "K♠",
+      "A♥",
+      "2♥",
+      "3♥",
+      "4♥",
+      "5♥",
+      "6♥",
+      "7♥",
+      "8♥",
+      "9♥",
+      "10♥",
+      "J♥",
+      "Q♥",
+      "K♥",
+      "A♦",
+      "2♦",
+      "3♦",
+      "4♦",
+      "5♦",
+      "6♦",
+      "7♦",
+      "8♦",
+      "9♦",
+      "10♦",
+      "J♦",
+      "Q♦",
+      "K♦",
+      "A♣",
+      "2♣",
+      "3♣",
+      "4♣",
+      "5♣",
+      "6♣",
+      "7♣",
+      "8♣",
+      "9♣",
+      "10♣",
+      "J♣",
+      "Q♣",
+      "K♣",
+    ];
+    cards.shuffle(_random);
+    final deck = {'cards': cards, 'position': 0};
+
     final tableData = {
-      '_meta': {
-        'maxPlayers': 4,
-        'startConsentCount': 0,
-        'startingChips': 1000,
-        'totalPlayers': 1,
-      },
-      'createdAt': ServerValue.timestamp,
-      'updatedAt': ServerValue.timestamp,
+      'id': tableId,
+      '_meta': {'maxPlayers': 4, 'totalPlayers': 1},
+      'createdAt': now,
+      'updatedAt': now,
       'gameName': gameName,
       'status': 'waiting',
-      'id': tableId,
-      'deck': {
-        'cards': [
-          "AS",
-          "2S",
-          "3S",
-          "4S",
-          "5S",
-          "6S",
-          "7S",
-          "8S",
-          "9S",
-          "10S",
-          "JS",
-          "QS",
-          "KS",
-          "AH",
-          "2H",
-          "3H",
-          "4H",
-          "5H",
-          "6H",
-          "7H",
-          "8H",
-          "9H",
-          "10H",
-          "JH",
-          "QH",
-          "KH",
-          "AD",
-          "2D",
-          "3D",
-          "4D",
-          "5D",
-          "6D",
-          "7D",
-          "8D",
-          "9D",
-          "10D",
-          "JD",
-          "QD",
-          "KD",
-          "AC",
-          "2C",
-          "3C",
-          "4C",
-          "5C",
-          "6C",
-          "7C",
-          "8C",
-          "9C",
-          "10C",
-          "JC",
-          "QC",
-          "KC",
-        ],
-        'position': 0,
-      },
-      'gameState': {'activePlayerIndex': 0},
-      'players': [
-        {
+      'deck': deck,
+      'gameState': {'eliminatedPlayers': [], 'potValue': 0, 'winner': null},
+      'players': {
+        user.uid: {
           'avatar': '',
-          'betAmount': 0,
+          'customBet': 0,
           'id': user.uid,
-          'initialChips': 1000,
+          'chips': 1000,
           'isConnected': true,
           'isEliminated': false,
           'name': user.displayName ?? user.email ?? 'Player',
-          'remainingChips': 1000,
           'seatPosition': 0,
-          'stats': {'losses': 0, 'wins': 0},
-          'status': {'startConsented': false, 'state': 'idle'},
+          'startConsented': false,
+          'stats': {'wins': 0, 'losses': 0},
+          'status': {'state': 'idle', 'decision': null},
         },
-      ],
-      'round': {
-        'hasBegun': false,
-        'potValue': 0,
-        'roundContribution': 200,
-        'roundCount': 0,
-        'roundNumber': 1,
       },
+      'round': {
+        'currentPlayerId': user.uid,
+        'currentRound': 1,
+        'totalRounds': 3,
+      },
+      'roundContribution': 200,
+      'startConsentCount': 0,
+      'startingChips': 1000,
     };
 
-    // Active table entry (same as before)
     final activeEntry = {
       '_meta': {'maxPlayers': 4, 'totalPlayers': 1},
       'contribution': 200,
@@ -174,7 +189,6 @@ class _LobbyPageState extends State<LobbyPage> {
     try {
       await newTableRef.set(tableData);
       await _activeTablesRef.child(tableId).set(activeEntry);
-      print("Table created: $tableId");
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -182,59 +196,10 @@ class _LobbyPageState extends State<LobbyPage> {
         );
       }
     } catch (e) {
-      print("Error: $e");
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Failed to create table: $e")));
     }
-  }
-
-  void _showCreateGameDialog() {
-    final TextEditingController nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create New Game'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Game Name'),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Round Contribution: 200 chips',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              'Total Players: 4',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              if (name.isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Please enter a game name')),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              _createGame(name);
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _joinGame(LobbyTable table) async {
@@ -251,7 +216,6 @@ class _LobbyPageState extends State<LobbyPage> {
     while (maxAttempts > 0 && !success) {
       maxAttempts--;
       try {
-        // Read current data
         final snapshot = await tableRef.get();
         if (!snapshot.exists) {
           errorMessage = "Table no longer exists.";
@@ -263,63 +227,55 @@ class _LobbyPageState extends State<LobbyPage> {
           break;
         }
 
-        final players = List<dynamic>.from(data['players'] ?? []);
-        final meta = Map<dynamic, dynamic>.from(data['_meta'] ?? {});
+        final playersMap = Map<String, dynamic>.from(data['players'] ?? {});
+        final meta = Map<String, dynamic>.from(data['_meta'] ?? {});
         final maxPlayers = (meta['maxPlayers'] as num?)?.toInt() ?? 4;
 
-        if (players.any((p) => p['id'] == user.uid)) {
+        if (playersMap.containsKey(user.uid)) {
           errorMessage = "You already joined this game.";
           break;
         }
-        if (players.length >= maxPlayers) {
+        if (playersMap.length >= maxPlayers) {
           errorMessage = "Game is full.";
           break;
         }
 
-        // Find free seat
-        final occupiedSeats = players
-            .map<int>((p) => p['seatPosition'] as int)
+        final occupiedSeats = playersMap.values
+            .map<int>((p) => (p['seatPosition'] as num?)?.toInt() ?? 0)
             .toSet();
         int freeSeat = 0;
         while (occupiedSeats.contains(freeSeat)) freeSeat++;
 
         final newPlayer = {
           'avatar': '',
-          'betAmount': 0,
+          'customBet': 0,
           'id': user.uid,
-          'initialChips': 1000,
+          'chips': 1000,
           'isConnected': true,
           'isEliminated': false,
           'name': user.displayName ?? user.email ?? 'Player',
-          'remainingChips': 1000,
           'seatPosition': freeSeat,
+          'startConsented': false,
           'stats': {'wins': 0, 'losses': 0},
-          'status': {'startConsented': false, 'state': 'idle'},
+          'status': {'state': 'idle', 'decision': null},
         };
-        players.add(newPlayer);
-        meta['totalPlayers'] = players.length;
+        playersMap[user.uid] = newPlayer;
+        meta['totalPlayers'] = playersMap.length;
 
-        // Try to update (using a version check to avoid conflicts)
-        final updates = {'_meta': meta, 'players': players};
-        await tableRef.update(updates);
+        await tableRef.update({'_meta': meta, 'players': playersMap});
         success = true;
       } catch (e) {
-        // Conflict – retry
-        print("Join attempt failed, retrying: $e");
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       }
     }
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage ?? "Failed to join. Please try again."),
-        ),
+        SnackBar(content: Text(errorMessage ?? "Failed to join. Try again.")),
       );
       return;
     }
 
-    // Update active table entry
     final activeSnapshot = await activeRef.get();
     if (activeSnapshot.exists) {
       final currentMeta = (activeSnapshot.value as Map)['_meta'] ?? {};
@@ -344,6 +300,81 @@ class _LobbyPageState extends State<LobbyPage> {
     }
   }
 
+  void _showCreateGameDialog() {
+    final TextEditingController nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.panelSurface,
+        title: Text('Create New Game', style: AppTheme.headingSmall),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Game Name',
+                labelStyle: AppTheme.captionGold,
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppTheme.panelBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppTheme.primaryGold),
+                ),
+              ),
+              style: AppTheme.bodyText,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text('Round Contribution:', style: AppTheme.bodyText),
+                Text(
+                  ' 200 chips',
+                  style: AppTheme.bodyText.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryGold,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Text('Total Players:', style: AppTheme.bodyText),
+                Text(
+                  ' 4',
+                  style: AppTheme.bodyText.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryGold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: AppTheme.bodyText),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Please enter a game name')),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              _createGame(name);
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _activeTablesSubscription?.cancel();
@@ -353,40 +384,283 @@ class _LobbyPageState extends State<LobbyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Available Tables')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateGameDialog,
-        child: const Icon(Icons.add),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.feltBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Back button
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppTheme.primaryGold,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Back',
+                    ),
+                    const SizedBox(width: 8),
+                    // Title – wraps when needed
+                    Expanded(
+                      child: Text(
+                        "Game Lobby",
+                        style: AppTheme.headingMedium,
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Online counter
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.pureBlack.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: AppTheme.statusGreen.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.statusGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_totalPlayersOnline Online',
+                            style: AppTheme.bodyText.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Create button
+                    IconButton(
+                      icon: const Icon(Icons.add, color: AppTheme.primaryGold),
+                      onPressed: _showCreateGameDialog,
+                      tooltip: 'Create Game',
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refreshTables,
+                  color: AppTheme.primaryGold,
+                  child: _isLoading
+                      ? _buildShimmerLoading()
+                      : _tables.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.table_restaurant,
+                                size: 64,
+                                color: AppTheme.primaryGold.withOpacity(0.5),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No tables waiting',
+                                style: AppTheme.headingSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Create a new game to get started',
+                                style: AppTheme.bodyText,
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: _showCreateGameDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('CREATE GAME'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _tables.length,
+                          itemBuilder: (context, index) =>
+                              _buildTableCard(_tables[index]),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tables.isEmpty
-          ? const Center(child: Text('No tables waiting.\nCreate one!'))
-          : ListView.builder(
-              itemCount: _tables.length,
-              itemBuilder: (context, index) {
-                final table = _tables[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      table.gameName,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Players: ${table.currentPlayerCount}/${table.totalPlayers} · ${table.roundContribution} chips',
-                    ),
-                    trailing: ElevatedButton(
-                      onPressed: () => _joinGame(table),
-                      child: const Text('Join'),
-                    ),
-                  ),
-                );
-              },
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: AppTheme.panelSurface.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: _ShimmerText(width: 120, height: 20)),
+                    _ShimmerText(width: 80, height: 16),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    _ShimmerText(width: 100, height: 14),
+                    SizedBox(width: 20),
+                    _ShimmerText(width: 80, height: 14),
+                  ],
+                ),
+                SizedBox(height: 16),
+                _ShimmerText(width: double.infinity, height: 40),
+              ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTableCard(LobbyTable table) {
+    final bool isAlmostFull =
+        table.currentPlayerCount >= table.totalPlayers - 1;
+    final Color statusColor = isAlmostFull
+        ? AppTheme.primaryGold
+        : AppTheme.statusGreen;
+    final String statusText = isAlmostFull ? "Almost full" : "Waiting";
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.panelSurface.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.panelBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    table.gameName,
+                    style: AppTheme.headingSmall.copyWith(fontSize: 18),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: AppTheme.captionGold.copyWith(
+                      color: statusColor,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.people, color: AppTheme.primaryGold, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  '${table.currentPlayerCount}/${table.totalPlayers} players',
+                  style: AppTheme.bodyText,
+                ),
+                const SizedBox(width: 20),
+                const Icon(
+                  Icons.monetization_on,
+                  color: AppTheme.primaryGold,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${table.roundContribution} chips',
+                  style: AppTheme.bodyText,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _joinGame(table),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.emeraldGreen,
+                  foregroundColor: AppTheme.whiteAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text('JOIN TABLE'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShimmerText extends StatelessWidget {
+  final double width;
+  final double height;
+  const _ShimmerText({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const SizedBox.shrink(),
     );
   }
 }

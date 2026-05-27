@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/services/PlayerLocalServices.dart';
+import 'package:flutter_application_1/core/services/authService.dart';
+import 'package:flutter_application_1/core/services/userService.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
 import 'package:flutter_application_1/core/widgets/custom_textfeild.dart';
 
@@ -11,40 +12,71 @@ class MyAccountPage extends StatefulWidget {
 }
 
 class _MyAccountPageState extends State<MyAccountPage> {
-  bool _isLoading = false;
-  bool _isEditing = false;
-  late TextEditingController _displayNameController;
+  final AuthService _auth = AuthService();
+  final UserService _userService = UserService();
 
-  int _chipsBalance = 1250000;
-  int _winCount = 342;
-  int _lossCount = 189;
-  String _rank = "Strategist";
+  bool _isLoading = true;
+  bool _isEditing = false;
+  late TextEditingController _usernameController;
+
+  // Real data from Realtime Database
+  String _username = '';
+  String _email = '';
+  int _chipsBalance = 0;
+  int _winCount = 0;
+  int _lossCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadName();
+    _loadUserData();
   }
 
-  Future<void> _loadName() async {
-    final name = await PlayerLocalService.getDisplayName();
-    _displayNameController = TextEditingController(text: name);
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _displayNameController.dispose();
-    super.dispose();
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final data = await _userService.getUserData(uid);
+      if (data != null) {
+        setState(() {
+          _username = data['username'] ?? 'Player';
+          _email = data['email'] ?? _auth.currentUser?.email ?? '';
+          _chipsBalance = (data['chips'] as int?) ?? 0;
+          _winCount = (data['wins'] as int?) ?? 0;
+          _lossCount = (data['losses'] as int?) ?? 0;
+          _usernameController = TextEditingController(text: _username);
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load profile: $e')));
+    }
   }
 
   Future<void> _updateProfile() async {
+    final newUsername = _usernameController.text.trim();
+    if (newUsername.isEmpty) return;
+
     setState(() => _isLoading = true);
     try {
-      await PlayerLocalService.setDisplayName(
-        _displayNameController.text.trim(),
-      );
-      setState(() => _isEditing = false);
+      final uid = _auth.currentUser?.uid;
+      if (uid != null) {
+        // Update username in Realtime Database
+        await _userService.updateUsername(uid, newUsername);
+      }
+      setState(() {
+        _username = newUsername;
+        _isEditing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );
@@ -58,6 +90,12 @@ class _MyAccountPageState extends State<MyAccountPage> {
   }
 
   @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.richBlack,
@@ -67,7 +105,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
         backgroundColor: AppTheme.pureBlack,
       ),
       body: Container(
-        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        decoration: const BoxDecoration(
+          gradient: AppTheme.feltBackgroundGradient,
+        ),
         child: Stack(
           children: [
             if (_isLoading)
@@ -102,15 +142,18 @@ class _MyAccountPageState extends State<MyAccountPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Local Player',
-                    style: AppTheme.bodyText.copyWith(fontSize: 16),
+                    _email,
+                    style: AppTheme.bodyText.copyWith(
+                      fontSize: 14,
+                      color: AppTheme.offWhite.withOpacity(0.7),
+                    ),
                   ),
                   const SizedBox(height: 32),
                   if (_isEditing) ...[
                     CustomTextfeild(
-                      hintText: 'Display Name',
+                      hintText: 'Username',
                       icon: Icons.person,
-                      controller: _displayNameController,
+                      controller: _usernameController,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -122,7 +165,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
                               backgroundColor: AppTheme.primaryGold,
                               foregroundColor: AppTheme.pureBlack,
                             ),
-                            child: const Text('Save Changes'),
+                            child: const Text('Save'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -135,17 +178,8 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       ],
                     ),
                   ] else ...[
-                    _buildInfoTile(
-                      Icons.badge,
-                      'Display Name',
-                      _displayNameController.text,
-                    ),
-                    _buildInfoTile(
-                      Icons.email,
-                      'Email',
-                      'Not available (local only)',
-                    ),
-                    _buildInfoTile(Icons.phone, 'Phone', 'Not available'),
+                    _buildInfoTile(Icons.badge, 'Username', _username),
+                    _buildInfoTile(Icons.email, 'Email', _email),
                     const Divider(color: AppTheme.primaryGold, height: 32),
                     Text(
                       'Game Statistics',
@@ -167,7 +201,6 @@ class _MyAccountPageState extends State<MyAccountPage> {
                       'Losses',
                       _lossCount.toString(),
                     ),
-                    _buildStatTile(Icons.workspace_premium, 'Rank', _rank),
                     const Divider(color: AppTheme.primaryGold, height: 32),
                     ElevatedButton.icon(
                       onPressed: () => setState(() => _isEditing = true),

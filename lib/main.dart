@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/services/authService.dart';
 import 'package:flutter_application_1/core/theme/appTheme.dart';
-import 'package:flutter_application_1/features/lobby/demoGameList.dart';
+import 'package:flutter_application_1/features/lobby/landingPage.dart';
 import 'package:flutter_application_1/firebase_options.dart';
 import 'package:flutter_application_1/features/auth/ui/loginPage.dart';
 
